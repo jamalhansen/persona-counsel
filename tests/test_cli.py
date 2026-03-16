@@ -209,3 +209,41 @@ class TestMainCommand:
     def test_year_missing_goals_exits_with_error(self, tmp_path):
         result = runner.invoke(app, ["--year", "2026", "--dry-run", "--vault", str(tmp_path)])
         assert result.exit_code == 1
+
+    def test_prior_report_missing_warns_but_continues(self, tmp_path):
+        vault = self._mock_run(tmp_path)
+        with (
+            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.cli.build_model"),
+            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+        ):
+            result = runner.invoke(
+                app,
+                ["--month", "2026-03", "--prior-report", "2026-02", "--dry-run", "--vault", str(vault)],
+            )
+        # Missing report should warn but not abort
+        assert result.exit_code == 0
+
+    def test_prior_report_loads_and_passes_through(self, tmp_path):
+        vault = self._mock_run(tmp_path)
+        # Write a fake prior council report
+        report_path = vault / "Goals" / "2026" / "_monthly" / "reviews" / "2026-02-council.md"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text("# February Council\nConsensus: fine.", encoding="utf-8")
+
+        captured = {}
+
+        def fake_run(coro):
+            captured["coro"] = coro
+            return [MOCK_EVALUATION], MOCK_SYNTHESIS
+
+        with (
+            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.cli.build_model"),
+            patch("persona_counsel.cli.asyncio.run", side_effect=fake_run),
+        ):
+            result = runner.invoke(
+                app,
+                ["--month", "2026-03", "--prior-report", "2026-02", "--dry-run", "--vault", str(vault)],
+            )
+        assert result.exit_code == 0
