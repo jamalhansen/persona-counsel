@@ -130,6 +130,14 @@ def main(
             help="Override persona weight (e.g. --weight solomon=1.5). Repeatable.",
         ),
     ] = None,
+    concurrency: Annotated[
+        int,
+        typer.Option(
+            "--concurrency",
+            "-c",
+            help="Max parallel API calls (lower = fewer rate-limit errors, default 3).",
+        ),
+    ] = 3,
     list_personas_flag: Annotated[
         bool,
         typer.Option("--list-personas", help="List available personas and exit."),
@@ -233,7 +241,7 @@ def main(
     # Run the council
     try:
         evaluations, synthesis = asyncio.run(
-            run_council(council_personas, goals_text, prior_text, pai_model, weights)
+            run_council(council_personas, goals_text, prior_text, pai_model, weights, concurrency)
         )
     except Exception as e:
         err_console.print(f"[red]Council run failed:[/red] {e}")

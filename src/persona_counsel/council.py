@@ -74,8 +74,9 @@ async def _evaluate_persona(
     goals_text: str,
     prior_text: str | None,
     model: Any,
+    semaphore: asyncio.Semaphore,
 ) -> PersonaEvaluation:
-    """Run a single persona evaluation."""
+    """Run a single persona evaluation, gated by a semaphore."""
     agent: Agent[None, PersonaEvaluation] = Agent(
         model,
         output_type=PersonaEvaluation,
@@ -83,7 +84,8 @@ async def _evaluate_persona(
         retries=3,
     )
     user_prompt = _build_evaluation_prompt(goals_text, prior_text)
-    result = await agent.run(user_prompt)
+    async with semaphore:
+        result = await agent.run(user_prompt)
     # Ensure persona metadata is correct regardless of LLM output
     ev = result.output
     ev.persona_name = persona.name
@@ -115,11 +117,13 @@ async def run_council(
     prior_text: str | None,
     model: Any,
     weights: dict[str, float],
+    concurrency: int = 3,
 ) -> tuple[list[PersonaEvaluation], CouncilSynthesis]:
-    """Evaluate all personas in parallel, then synthesize. Returns (evaluations, synthesis)."""
-    # All persona evaluations run concurrently -- no persona sees another's output
+    """Evaluate all personas in parallel (up to `concurrency` at once), then synthesize."""
+    semaphore = asyncio.Semaphore(concurrency)
     evaluation_tasks = [
-        _evaluate_persona(persona, goals_text, prior_text, model) for persona in personas
+        _evaluate_persona(persona, goals_text, prior_text, model, semaphore)
+        for persona in personas
     ]
     evaluations: list[PersonaEvaluation] = list(await asyncio.gather(*evaluation_tasks))
 
