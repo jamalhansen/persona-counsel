@@ -8,9 +8,9 @@ from pydantic_ai import Agent
 from .models import CouncilSynthesis, PersonaEvaluation
 
 EVALUATION_USER_PROMPT = """\
-Please review the following monthly goals note and evaluate this month from your unique perspective.
+Please review the following goals note and evaluate this period from your unique perspective.
 
---- MONTHLY GOALS ---
+--- GOALS ---
 {goals_text}
 {prior_section}
 
@@ -80,6 +80,7 @@ async def _evaluate_persona(
         model,
         output_type=PersonaEvaluation,
         system_prompt=persona.system_prompt,
+        retries=3,
     )
     user_prompt = _build_evaluation_prompt(goals_text, prior_text)
     result = await agent.run(user_prompt)
@@ -100,6 +101,7 @@ async def _synthesize(
         model,
         output_type=CouncilSynthesis,
         system_prompt=SYNTHESIS_SYSTEM_PROMPT,
+        retries=3,
     )
     eval_text = _format_evaluations_for_synthesis(evaluations, weights)
     user_prompt = SYNTHESIS_USER_PROMPT.format(evaluations_text=eval_text)
