@@ -19,6 +19,7 @@ from .goals import (
     current_year,
     goals_output_path,
     load_annual_goals,
+    load_council_report,
     load_goals,
     load_weekly_goals,
     weekly_output_path,
@@ -95,7 +96,14 @@ def main(
         Optional[str],
         typer.Option(
             "--prior",
-            help="Prior period for context. Same format as the scope (YYYY-MM / YYYY-WNN / YYYY).",
+            help="Prior period goals note for context (YYYY-MM / YYYY-WNN / YYYY).",
+        ),
+    ] = None,
+    prior_report: Annotated[
+        Optional[str],
+        typer.Option(
+            "--prior-report",
+            help="Prior council report for context — lets personas see what was recommended last time (YYYY-MM / YYYY-WNN / YYYY).",
         ),
     ] = None,
     provider: Annotated[
@@ -211,6 +219,15 @@ def main(
         except FileNotFoundError as e:
             err_console.print(f"[yellow]Warning:[/yellow] {e}")
 
+    prior_report_text: Optional[str] = None
+    if prior_report:
+        if verbose:
+            console.print(f"[dim]Loading prior council report {prior_report} for context...[/dim]")
+        try:
+            prior_report_text = load_council_report(prior_report, vault_root=vault_root)
+        except (FileNotFoundError, ValueError) as e:
+            err_console.print(f"[yellow]Warning:[/yellow] {e}")
+
     # Load personas
     all_personas = list_personas()
     council_personas = [p for p in all_personas if p.name.lower() in COUNCIL_PERSONA_NAMES]
@@ -241,7 +258,10 @@ def main(
     # Run the council
     try:
         evaluations, synthesis = asyncio.run(
-            run_council(council_personas, goals_text, prior_text, pai_model, weights, concurrency)
+            run_council(
+                council_personas, goals_text, prior_text, pai_model, weights,
+                concurrency, prior_report_text,
+            )
         )
     except Exception as e:
         err_console.print(f"[red]Council run failed:[/red] {e}")

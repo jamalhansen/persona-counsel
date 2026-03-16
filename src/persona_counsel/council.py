@@ -12,8 +12,7 @@ Please review the following goals note and evaluate this period from your unique
 
 --- GOALS ---
 {goals_text}
-{prior_section}
-
+{prior_section}{prior_report_section}
 Return your evaluation as structured output.
 """
 
@@ -40,13 +39,21 @@ Synthesize a consensus, surface tensions, propose priorities, and quote Coyote's
 """
 
 
-def _build_evaluation_prompt(goals_text: str, prior_text: str | None) -> str:
+def _build_evaluation_prompt(
+    goals_text: str,
+    prior_text: str | None,
+    prior_report_text: str | None = None,
+) -> str:
     prior_section = ""
     if prior_text:
-        prior_section = f"\n--- PRIOR MONTH (for context) ---\n{prior_text}\n"
+        prior_section = f"\n--- PRIOR PERIOD GOALS (for context) ---\n{prior_text}\n"
+    prior_report_section = ""
+    if prior_report_text:
+        prior_report_section = f"\n--- PRIOR COUNCIL REPORT (what was recommended last time) ---\n{prior_report_text}\n"
     return EVALUATION_USER_PROMPT.format(
         goals_text=goals_text,
         prior_section=prior_section,
+        prior_report_section=prior_report_section,
     )
 
 
@@ -75,6 +82,7 @@ async def _evaluate_persona(
     prior_text: str | None,
     model: Any,
     semaphore: asyncio.Semaphore,
+    prior_report_text: str | None = None,
 ) -> PersonaEvaluation:
     """Run a single persona evaluation, gated by a semaphore."""
     agent: Agent[None, PersonaEvaluation] = Agent(
@@ -83,7 +91,7 @@ async def _evaluate_persona(
         system_prompt=persona.system_prompt,
         retries=3,
     )
-    user_prompt = _build_evaluation_prompt(goals_text, prior_text)
+    user_prompt = _build_evaluation_prompt(goals_text, prior_text, prior_report_text)
     async with semaphore:
         result = await agent.run(user_prompt)
     # Ensure persona metadata is correct regardless of LLM output
@@ -118,11 +126,12 @@ async def run_council(
     model: Any,
     weights: dict[str, float],
     concurrency: int = 3,
+    prior_report_text: str | None = None,
 ) -> tuple[list[PersonaEvaluation], CouncilSynthesis]:
     """Evaluate all personas in parallel (up to `concurrency` at once), then synthesize."""
     semaphore = asyncio.Semaphore(concurrency)
     evaluation_tasks = [
-        _evaluate_persona(persona, goals_text, prior_text, model, semaphore)
+        _evaluate_persona(persona, goals_text, prior_text, model, semaphore, prior_report_text)
         for persona in personas
     ]
     evaluations: list[PersonaEvaluation] = list(await asyncio.gather(*evaluation_tasks))

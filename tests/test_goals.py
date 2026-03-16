@@ -8,6 +8,7 @@ from persona_counsel.goals import (
     current_year,
     goals_output_path,
     load_annual_goals,
+    load_council_report,
     load_goals,
     load_weekly_goals,
     weekly_output_path,
@@ -108,3 +109,39 @@ class TestOutputPaths:
     def test_different_year_in_monthly_path(self, tmp_path):
         path = goals_output_path("2025-11", vault_root=tmp_path)
         assert "2025" in str(path) and "2025-11-council.md" in str(path)
+
+
+class TestLoadCouncilReport:
+    def _write_report(self, tmp_path, period: str, content: str) -> None:
+        """Write a fake council report at the expected output path."""
+        if "-W" in period:
+            path = tmp_path / "Goals" / period[:4] / "_weekly" / "reviews" / f"{period}-council.md"
+        elif len(period) == 4:
+            path = tmp_path / "Goals" / period / "_annual" / "reviews" / f"{period}-council.md"
+        else:
+            path = tmp_path / "Goals" / period[:4] / "_monthly" / "reviews" / f"{period}-council.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    def test_loads_monthly_report(self, tmp_path):
+        self._write_report(tmp_path, "2026-02", "# February Council\nConsensus: great month.")
+        content = load_council_report("2026-02", vault_root=tmp_path)
+        assert "Consensus: great month" in content
+
+    def test_loads_weekly_report(self, tmp_path):
+        self._write_report(tmp_path, "2026-W10", "# Week 10 Council\nFocus was good.")
+        content = load_council_report("2026-W10", vault_root=tmp_path)
+        assert "Focus was good" in content
+
+    def test_loads_annual_report(self, tmp_path):
+        self._write_report(tmp_path, "2025", "# 2025 Council\nBig year.")
+        content = load_council_report("2025", vault_root=tmp_path)
+        assert "Big year" in content
+
+    def test_missing_report_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError, match="2026-02"):
+            load_council_report("2026-02", vault_root=tmp_path)
+
+    def test_invalid_period_raises(self, tmp_path):
+        with pytest.raises(ValueError, match="Cannot determine period type"):
+            load_council_report("not-a-period", vault_root=tmp_path)

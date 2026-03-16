@@ -29,12 +29,22 @@ class TestBuildEvaluationPrompt:
 
     def test_no_prior_section_when_none(self):
         prompt = _build_evaluation_prompt("## Goals", None)
-        assert "PRIOR MONTH" not in prompt
+        assert "PRIOR PERIOD" not in prompt
+        assert "PRIOR COUNCIL" not in prompt
 
     def test_includes_prior_when_provided(self):
         prompt = _build_evaluation_prompt("## Goals", "## Prior Goals")
-        assert "PRIOR MONTH" in prompt
+        assert "PRIOR PERIOD GOALS" in prompt
         assert "## Prior Goals" in prompt
+
+    def test_includes_prior_report_when_provided(self):
+        prompt = _build_evaluation_prompt("## Goals", None, prior_report_text="## Last Council")
+        assert "PRIOR COUNCIL REPORT" in prompt
+        assert "## Last Council" in prompt
+
+    def test_prior_report_absent_when_none(self):
+        prompt = _build_evaluation_prompt("## Goals", None)
+        assert "PRIOR COUNCIL REPORT" not in prompt
 
 
 class TestFormatEvaluationsForSynthesis:
