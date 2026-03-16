@@ -1,0 +1,44 @@
+[project]
+name = "persona-counsel"
+version = "0.1.0"
+description = "A council of named personas that evaluate your monthly goals and surface tensions."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Jamal Hansen", email = "jamal.hansen@gmail.com" }
+]
+dependencies = [
+    "local-first-common @ git+https://github.com/jamalhansen/local-first-common.git@main",
+    "pydantic-ai>=1.68.0",
+    "python-frontmatter>=1.1.0",
+    "pyyaml>=6.0.3",
+    "rich>=14.3.3",
+    "typer>=0.24.1",
+]
+
+[project.scripts]
+counsel = "persona_counsel.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/persona_counsel"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.15.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.uv.sources]
+local-first-common = { git = "https://github.com/jamalhansen/local-first-common.git", branch = "main" }
