@@ -1,7 +1,7 @@
 """Tests for the markdown renderer."""
 
 from persona_counsel.models import CouncilSynthesis, PersonaEvaluation
-from persona_counsel.renderer import render_evaluation, render_report, _month_label
+from persona_counsel.renderer import _month_label, _period_label, render_evaluation, render_report
 
 
 def make_evaluation(name="Solomon", archetype="The Elder") -> PersonaEvaluation:
@@ -24,15 +24,37 @@ def make_synthesis() -> CouncilSynthesis:
     )
 
 
-class TestMonthLabel:
+class TestPeriodLabel:
+    # Monthly
     def test_known_month(self):
-        assert _month_label("2026-03") == "March 2026"
+        assert _period_label("2026-03") == "March 2026"
 
     def test_january(self):
-        assert _month_label("2025-01") == "January 2025"
+        assert _period_label("2025-01") == "January 2025"
 
     def test_december(self):
-        assert _month_label("2024-12") == "December 2024"
+        assert _period_label("2024-12") == "December 2024"
+
+    # Weekly
+    def test_week_single_digit(self):
+        assert _period_label("2026-W1") == "Week 1, 2026"
+
+    def test_week_double_digit(self):
+        assert _period_label("2026-W10") == "Week 10, 2026"
+
+    def test_week_end_of_year(self):
+        assert _period_label("2025-W52") == "Week 52, 2025"
+
+    # Annual
+    def test_year(self):
+        assert _period_label("2026") == "2026"
+
+    def test_year_different(self):
+        assert _period_label("2024") == "2024"
+
+    # Alias
+    def test_month_label_alias_still_works(self):
+        assert _month_label("2026-03") == "March 2026"
 
 
 class TestRenderEvaluation:
@@ -81,13 +103,37 @@ class TestRenderReport:
         report = render_report("2026-03", [ev], s, "ollama", "phi4-mini")
         assert "# Council Review: March 2026" in report
 
-    def test_contains_frontmatter(self):
+    def test_contains_week_heading(self):
+        ev = make_evaluation()
+        s = make_synthesis()
+        report = render_report("2026-W10", [ev], s, "ollama", "phi4-mini")
+        assert "# Council Review: Week 10, 2026" in report
+
+    def test_contains_year_heading(self):
+        ev = make_evaluation()
+        s = make_synthesis()
+        report = render_report("2026", [ev], s, "ollama", "phi4-mini")
+        assert "# Council Review: 2026" in report
+
+    def test_contains_frontmatter_period(self):
         ev = make_evaluation()
         s = make_synthesis()
         report = render_report("2026-03", [ev], s, "ollama", "phi4-mini")
-        assert "Month: 2026-03" in report
+        assert "Period: 2026-03" in report
         assert "Provider: ollama" in report
         assert "Model: phi4-mini" in report
+
+    def test_week_frontmatter(self):
+        ev = make_evaluation()
+        s = make_synthesis()
+        report = render_report("2026-W10", [ev], s, "ollama", "phi4-mini")
+        assert "Period: 2026-W10" in report
+
+    def test_year_frontmatter(self):
+        ev = make_evaluation()
+        s = make_synthesis()
+        report = render_report("2026", [ev], s, "ollama", "phi4-mini")
+        assert "Period: 2026" in report
 
     def test_contains_consensus(self):
         ev = make_evaluation()
@@ -122,4 +168,4 @@ class TestRenderReport:
         report = render_report("2026-03", [ev1, ev2], s, "anthropic", "claude-haiku-4-5-20251001")
         assert "Solomon" in report
         assert "Hiro" in report
-        assert "Solomon, Hiro" in report  # in frontmatter
+        assert "Solomon, Hiro" in report

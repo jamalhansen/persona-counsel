@@ -67,12 +67,48 @@ class TestListPersonasFlag:
         assert result.exit_code == 1
 
 
+class TestValidateScope:
+    def test_both_month_and_week_rejected(self, tmp_path):
+        result = runner.invoke(app, ["--month", "2026-03", "--week", "2026-W10", "--dry-run", "--vault", str(tmp_path)])
+        assert result.exit_code == 1
+
+    def test_both_month_and_year_rejected(self, tmp_path):
+        result = runner.invoke(app, ["--month", "2026-03", "--year", "2026", "--dry-run", "--vault", str(tmp_path)])
+        assert result.exit_code == 1
+
+    def test_both_week_and_year_rejected(self, tmp_path):
+        result = runner.invoke(app, ["--week", "2026-W10", "--year", "2026", "--dry-run", "--vault", str(tmp_path)])
+        assert result.exit_code == 1
+
+    def test_invalid_week_format_rejected(self, tmp_path):
+        result = runner.invoke(app, ["--week", "W10-2026", "--dry-run", "--vault", str(tmp_path)])
+        assert result.exit_code == 1
+
+    def test_invalid_year_format_rejected(self, tmp_path):
+        result = runner.invoke(app, ["--year", "26", "--dry-run", "--vault", str(tmp_path)])
+        assert result.exit_code == 1
+
+
 class TestMainCommand:
     def _mock_run(self, tmp_path, month="2026-03"):
-        """Set up a vault with a goals note."""
+        """Set up a vault with a monthly goals note."""
         goals_path = tmp_path / "Goals" / "2026" / "_monthly" / f"{month}.md"
         goals_path.parent.mkdir(parents=True, exist_ok=True)
         goals_path.write_text("## Goals\nDo the work.", encoding="utf-8")
+        return tmp_path
+
+    def _mock_week_run(self, tmp_path, week="2026-W10"):
+        """Set up a vault with a weekly goals note."""
+        goals_path = tmp_path / "Goals" / "2026" / "_weekly" / f"{week}.md"
+        goals_path.parent.mkdir(parents=True, exist_ok=True)
+        goals_path.write_text("## Goals\nDo the weekly work.", encoding="utf-8")
+        return tmp_path
+
+    def _mock_year_run(self, tmp_path, year="2026"):
+        """Set up a vault with an annual goals note."""
+        goals_path = tmp_path / "Goals" / year / "_annual" / f"{year}.md"
+        goals_path.parent.mkdir(parents=True, exist_ok=True)
+        goals_path.write_text("## Goals\nDo the yearly work.", encoding="utf-8")
         return tmp_path
 
     def test_dry_run_prints_to_terminal(self, tmp_path):
@@ -112,4 +148,64 @@ class TestMainCommand:
                 app,
                 ["--month", "2026-03", "--dry-run", "--vault", str(vault), "--provider", "badprovider"],
             )
+        assert result.exit_code == 1
+
+    def test_week_dry_run_prints_to_terminal(self, tmp_path):
+        vault = self._mock_week_run(tmp_path)
+        with (
+            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.cli.build_model"),
+            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+        ):
+            result = runner.invoke(
+                app, ["--week", "2026-W10", "--dry-run", "--vault", str(vault)]
+            )
+        assert result.exit_code == 0
+
+    def test_week_writes_to_weekly_path(self, tmp_path):
+        vault = self._mock_week_run(tmp_path)
+        with (
+            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.cli.build_model"),
+            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+        ):
+            result = runner.invoke(
+                app, ["--week", "2026-W10", "--vault", str(vault)]
+            )
+        assert result.exit_code == 0
+        output_file = vault / "Goals" / "2026" / "_weekly" / "reviews" / "2026-W10-council.md"
+        assert output_file.exists()
+
+    def test_week_missing_goals_exits_with_error(self, tmp_path):
+        result = runner.invoke(app, ["--week", "2026-W10", "--dry-run", "--vault", str(tmp_path)])
+        assert result.exit_code == 1
+
+    def test_year_dry_run_prints_to_terminal(self, tmp_path):
+        vault = self._mock_year_run(tmp_path)
+        with (
+            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.cli.build_model"),
+            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+        ):
+            result = runner.invoke(
+                app, ["--year", "2026", "--dry-run", "--vault", str(vault)]
+            )
+        assert result.exit_code == 0
+
+    def test_year_writes_to_annual_path(self, tmp_path):
+        vault = self._mock_year_run(tmp_path)
+        with (
+            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.cli.build_model"),
+            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+        ):
+            result = runner.invoke(
+                app, ["--year", "2026", "--vault", str(vault)]
+            )
+        assert result.exit_code == 0
+        output_file = vault / "Goals" / "2026" / "_annual" / "reviews" / "2026-council.md"
+        assert output_file.exists()
+
+    def test_year_missing_goals_exits_with_error(self, tmp_path):
+        result = runner.invoke(app, ["--year", "2026", "--dry-run", "--vault", str(tmp_path)])
         assert result.exit_code == 1

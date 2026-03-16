@@ -19,10 +19,24 @@ MONTH_NAMES = {
 }
 
 
-def _month_label(month: str) -> str:
-    """Convert YYYY-MM to 'Month YYYY'."""
-    year, m = month.split("-")
+def _period_label(period: str) -> str:
+    """Convert a period string to a human-readable label.
+
+    YYYY-MM  -> "March 2026"
+    YYYY-WNN -> "Week 10, 2026"
+    YYYY     -> "2026"
+    """
+    if len(period) == 4 and period.isdigit():
+        return period  # annual: "2026"
+    if "-W" in period:
+        year, week = period.split("-W", 1)
+        return f"Week {int(week)}, {year}"
+    year, m = period.split("-")
     return f"{MONTH_NAMES.get(m, m)} {year}"
+
+
+# Keep the old name as an alias so tests importing it directly still pass
+_month_label = _period_label
 
 
 def render_evaluation(ev: PersonaEvaluation) -> str:
@@ -48,7 +62,7 @@ def render_evaluation(ev: PersonaEvaluation) -> str:
 
 
 def render_report(
-    month: str,
+    period: str,
     evaluations: list[PersonaEvaluation],
     synthesis: CouncilSynthesis,
     provider: str,
@@ -57,12 +71,12 @@ def render_report(
     """Render the full council report as a markdown string."""
     persona_names = ", ".join(ev.persona_name for ev in evaluations)
     generated = date.today().isoformat()
-    label = _month_label(month)
+    label = _period_label(period)
 
-    frontmatter = (
+    fm = (
         f"---\n"
         f"Generated: {generated}\n"
-        f"Month: {month}\n"
+        f"Period: {period}\n"
         f"Personas: {persona_names}\n"
         f"Provider: {provider}\n"
         f"Model: {model}\n"
@@ -70,7 +84,7 @@ def render_report(
     )
 
     sections = [
-        frontmatter,
+        fm,
         f"# Council Review: {label}",
         "",
         "## Consensus",

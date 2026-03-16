@@ -1,6 +1,7 @@
 """Typer CLI for persona-counsel."""
 import asyncio
 import os
+import re
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -11,11 +12,21 @@ from rich.console import Console
 from rich.markdown import Markdown
 
 from .council import run_council
-from .goals import current_month, goals_output_path, load_goals
+from .goals import (
+    annual_output_path,
+    current_month,
+    current_week,
+    current_year,
+    goals_output_path,
+    load_annual_goals,
+    load_goals,
+    load_weekly_goals,
+    weekly_output_path,
+)
 from .model_factory import PROVIDER_DEFAULTS, VALID_PROVIDERS, build_model
 from .renderer import render_report
 
-app = typer.Typer(help="Run your monthly goals through a council of named personas.")
+app = typer.Typer(help="Run your goals through a council of named personas.")
 console = Console()
 err_console = Console(stderr=True)
 
@@ -30,6 +41,10 @@ COUNCIL_PERSONA_NAMES = [
     "coyote",
 ]
 
+_MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
+_WEEK_RE = re.compile(r"^\d{4}-W\d{1,2}$")
+_YEAR_RE = re.compile(r"^\d{4}$")
+
 
 def _parse_weight(raw: str) -> tuple[str, float]:
     """Parse a 'name=value' weight flag. Returns (name, value)."""
@@ -42,15 +57,46 @@ def _parse_weight(raw: str) -> tuple[str, float]:
         )
 
 
+def _validate_scope(month: Optional[str], week: Optional[str], year: Optional[str]) -> str:
+    """Ensure at most one scope flag is set. Return the active scope: 'month', 'week', or 'year'."""
+    active = sum(x is not None for x in [month, week, year])
+    if active > 1:
+        raise typer.BadParameter(
+            "--month, --week, and --year are mutually exclusive. Specify at most one."
+        )
+    if week is not None:
+        if not _WEEK_RE.match(week):
+            raise typer.BadParameter(f"--week must be YYYY-WNN (e.g. 2026-W10), got: {week!r}")
+        return "week"
+    if year is not None:
+        if not _YEAR_RE.match(year):
+            raise typer.BadParameter(f"--year must be YYYY (e.g. 2026), got: {year!r}")
+        return "year"
+    if month is not None and not _MONTH_RE.match(month):
+        raise typer.BadParameter(f"--month must be YYYY-MM (e.g. 2026-03), got: {month!r}")
+    return "month"
+
+
 @app.command()
 def main(
     month: Annotated[
         Optional[str],
         typer.Option("--month", "-m", help="Month to evaluate (YYYY-MM). Defaults to current month."),
     ] = None,
+    week: Annotated[
+        Optional[str],
+        typer.Option("--week", help="ISO week to evaluate (YYYY-WNN, e.g. 2026-W10)."),
+    ] = None,
+    year: Annotated[
+        Optional[str],
+        typer.Option("--year", help="Year to evaluate (YYYY, e.g. 2026)."),
+    ] = None,
     prior: Annotated[
         Optional[str],
-        typer.Option("--prior", help="Prior month for context (YYYY-MM)."),
+        typer.Option(
+            "--prior",
+            help="Prior period for context. Same format as the scope (YYYY-MM / YYYY-WNN / YYYY).",
+        ),
     ] = None,
     provider: Annotated[
         str,
@@ -89,7 +135,13 @@ def main(
         typer.Option("--list-personas", help="List available personas and exit."),
     ] = False,
 ) -> None:
-    """Run your monthly goals through the council and receive a qualitative synthesis."""
+    """Run your goals through the council and receive a qualitative synthesis.
+
+    Scope flags (pick one):
+      --month YYYY-MM   Monthly goals note (default: current month)
+      --week  YYYY-WNN  Weekly goals note (e.g. 2026-W10)
+      --year  YYYY      Annual goals note (e.g. 2026)
+    """
 
     # Handle --list-personas
     if list_personas_flag:
@@ -103,8 +155,26 @@ def main(
         console.print()
         raise typer.Exit()
 
-    # Resolve month
-    target_month = month or current_month()
+    # Validate scope flags
+    try:
+        scope = _validate_scope(month, week, year)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+
+    # Resolve the active period and select loaders
+    if scope == "week":
+        period = week or current_week()
+        loader = load_weekly_goals
+        output_fn = weekly_output_path
+    elif scope == "year":
+        period = year or current_year()
+        loader = load_annual_goals
+        output_fn = annual_output_path
+    else:
+        period = month or current_month()
+        loader = load_goals
+        output_fn = goals_output_path
 
     # Parse weights
     weights: dict[str, float] = {}
@@ -117,9 +187,9 @@ def main(
 
     # Load goals
     if verbose:
-        console.print(f"[dim]Loading goals for {target_month}...[/dim]")
+        console.print(f"[dim]Loading goals for {period}...[/dim]")
     try:
-        goals_text = load_goals(target_month, vault_root=vault_root)
+        goals_text = loader(period, vault_root=vault_root)
     except FileNotFoundError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)
@@ -127,9 +197,9 @@ def main(
     prior_text: Optional[str] = None
     if prior:
         if verbose:
-            console.print(f"[dim]Loading prior month {prior} for context...[/dim]")
+            console.print(f"[dim]Loading prior period {prior} for context...[/dim]")
         try:
-            prior_text = load_goals(prior, vault_root=vault_root)
+            prior_text = loader(prior, vault_root=vault_root)
         except FileNotFoundError as e:
             err_console.print(f"[yellow]Warning:[/yellow] {e}")
 
@@ -155,7 +225,7 @@ def main(
     model_name = model or PROVIDER_DEFAULTS.get(provider, "unknown")
 
     console.print(
-        f"[bold]Running council[/bold] for [cyan]{target_month}[/cyan] "
+        f"[bold]Running council[/bold] for [cyan]{period}[/cyan] "
         f"with [dim]{provider}:{model_name}[/dim] "
         f"({len(council_personas)} personas)..."
     )
@@ -173,7 +243,7 @@ def main(
         raise typer.Exit(1)
 
     # Render report
-    report = render_report(target_month, evaluations, synthesis, provider, model_name)
+    report = render_report(period, evaluations, synthesis, provider, model_name)
 
     if dry_run:
         console.print("\n")
@@ -181,7 +251,7 @@ def main(
         return
 
     # Write to file
-    output_path = goals_output_path(target_month, vault_root=vault_root)
+    output_path = output_fn(period, vault_root=vault_root)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(report, encoding="utf-8")
     console.print(f"\n[green]Written:[/green] {output_path}")
