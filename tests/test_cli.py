@@ -1,4 +1,5 @@
 """Tests for the Typer CLI."""
+import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,6 +33,13 @@ def make_persona_mock(name="Solomon", archetype="The Elder"):
     m.name = name
     m.archetype = archetype
     return m
+
+
+def fake_async_run(coro):
+    """Mock for asyncio.run that properly closes coroutines."""
+    if asyncio.iscoroutine(coro):
+        coro.close()
+    return [MOCK_EVALUATION], MOCK_SYNTHESIS
 
 
 class TestParseWeight:
@@ -116,7 +124,7 @@ class TestMainCommand:
         with (
             patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
             patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--month", "2026-03", "--dry-run", "--vault", str(vault)]
@@ -132,7 +140,7 @@ class TestMainCommand:
         with (
             patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
             patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--month", "2026-03", "--vault", str(vault)]
@@ -155,7 +163,7 @@ class TestMainCommand:
         with (
             patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
             patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--week", "2026-W10", "--dry-run", "--vault", str(vault)]
@@ -167,7 +175,7 @@ class TestMainCommand:
         with (
             patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
             patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--week", "2026-W10", "--vault", str(vault)]
@@ -185,7 +193,7 @@ class TestMainCommand:
         with (
             patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
             patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--year", "2026", "--dry-run", "--vault", str(vault)]
@@ -197,7 +205,7 @@ class TestMainCommand:
         with (
             patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
             patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--year", "2026", "--vault", str(vault)]
@@ -215,7 +223,7 @@ class TestMainCommand:
         with (
             patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
             patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", return_value=([MOCK_EVALUATION], MOCK_SYNTHESIS)),
+            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app,
@@ -235,6 +243,8 @@ class TestMainCommand:
 
         def fake_run(coro):
             captured["coro"] = coro
+            if asyncio.iscoroutine(coro):
+                coro.close()
             return [MOCK_EVALUATION], MOCK_SYNTHESIS
 
         with (

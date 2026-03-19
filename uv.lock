@@ -1225,16 +1225,41 @@ wheels = [
 ]
 
 [[package]]
+name = "langdetect"
+version = "1.0.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0e/72/a3add0e4eec4eb9e2569554f7c70f4a3c27712f40e3284d483e88094cc0e/langdetect-1.0.9.tar.gz", hash = "sha256:cbc1fef89f8d062739774bd51eda3da3274006b3661d199c2655f6b3f6d605a0", size = 981474 }
+
+[[package]]
 name = "local-first-common"
 version = "0.1.0"
-source = { git = "https://github.com/jamalhansen/local-first-common.git?branch=main#f4c4746b5611cb8f68ec378738b5e44adc9687e5" }
+source = { editable = "../local-first-common" }
 dependencies = [
     { name = "httpx" },
+    { name = "langdetect" },
     { name = "pydantic" },
+    { name = "pydantic-settings" },
     { name = "python-frontmatter" },
     { name = "pyyaml" },
     { name = "typer" },
 ]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "langdetect", specifier = ">=1.0.9" },
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pydantic-settings", specifier = ">=2.13.1" },
+    { name = "python-frontmatter", specifier = ">=1.1.0" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "typer", specifier = ">=0.24.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.2" }]
 
 [[package]]
 name = "logfire"
@@ -1645,7 +1670,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "local-first-common", git = "https://github.com/jamalhansen/local-first-common.git?branch=main" },
+    { name = "local-first-common", editable = "../local-first-common" },
     { name = "pydantic-ai", specifier = ">=1.68.0" },
     { name = "python-frontmatter", specifier = ">=1.1.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },

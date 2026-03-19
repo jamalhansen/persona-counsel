@@ -8,7 +8,7 @@ authors = [
     { name = "Jamal Hansen", email = "jamal.hansen@gmail.com" }
 ]
 dependencies = [
-    "local-first-common @ git+https://github.com/jamalhansen/local-first-common.git@main",
+    "local-first-common",
     "pydantic-ai>=1.68.0",
     "python-frontmatter>=1.1.0",
     "pyyaml>=6.0.3",
