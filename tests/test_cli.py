@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from persona_counsel.cli import app, _parse_weight
+from persona_counsel.logic import app, _parse_weight
 from persona_counsel.models import CouncilSynthesis, PersonaEvaluation
 
 runner = CliRunner()
@@ -70,7 +70,7 @@ class TestListPersonasFlag:
         assert result.exit_code in (0, 1)
 
     def test_list_personas_empty_dir(self):
-        with patch("persona_counsel.cli.list_personas", return_value=[]):
+        with patch("persona_counsel.logic.list_personas", return_value=[]):
             result = runner.invoke(app, ["--list-personas"])
         assert result.exit_code == 1
 
@@ -122,9 +122,9 @@ class TestMainCommand:
     def test_dry_run_prints_to_terminal(self, tmp_path):
         vault = self._mock_run(tmp_path)
         with (
-            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
-            patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
+            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.logic.build_model"),
+            patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--month", "2026-03", "--dry-run", "--vault", str(vault)]
@@ -138,9 +138,9 @@ class TestMainCommand:
     def test_writes_file_without_dry_run(self, tmp_path):
         vault = self._mock_run(tmp_path)
         with (
-            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
-            patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
+            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.logic.build_model"),
+            patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--month", "2026-03", "--vault", str(vault)]
@@ -151,7 +151,7 @@ class TestMainCommand:
 
     def test_invalid_provider_exits_with_error(self, tmp_path):
         vault = self._mock_run(tmp_path)
-        with patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]):
+        with patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]):
             result = runner.invoke(
                 app,
                 ["--month", "2026-03", "--dry-run", "--vault", str(vault), "--provider", "badprovider"],
@@ -161,9 +161,9 @@ class TestMainCommand:
     def test_week_dry_run_prints_to_terminal(self, tmp_path):
         vault = self._mock_week_run(tmp_path)
         with (
-            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
-            patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
+            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.logic.build_model"),
+            patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--week", "2026-W10", "--dry-run", "--vault", str(vault)]
@@ -173,9 +173,9 @@ class TestMainCommand:
     def test_week_writes_to_weekly_path(self, tmp_path):
         vault = self._mock_week_run(tmp_path)
         with (
-            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
-            patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
+            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.logic.build_model"),
+            patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--week", "2026-W10", "--vault", str(vault)]
@@ -191,9 +191,9 @@ class TestMainCommand:
     def test_year_dry_run_prints_to_terminal(self, tmp_path):
         vault = self._mock_year_run(tmp_path)
         with (
-            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
-            patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
+            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.logic.build_model"),
+            patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--year", "2026", "--dry-run", "--vault", str(vault)]
@@ -203,9 +203,9 @@ class TestMainCommand:
     def test_year_writes_to_annual_path(self, tmp_path):
         vault = self._mock_year_run(tmp_path)
         with (
-            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
-            patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
+            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.logic.build_model"),
+            patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app, ["--year", "2026", "--vault", str(vault)]
@@ -221,9 +221,9 @@ class TestMainCommand:
     def test_prior_report_missing_warns_but_continues(self, tmp_path):
         vault = self._mock_run(tmp_path)
         with (
-            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
-            patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
+            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.logic.build_model"),
+            patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app,
@@ -248,9 +248,9 @@ class TestMainCommand:
             return [MOCK_EVALUATION], MOCK_SYNTHESIS
 
         with (
-            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
-            patch("persona_counsel.cli.build_model"),
-            patch("persona_counsel.cli.asyncio.run", side_effect=fake_run),
+            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.logic.build_model"),
+            patch("persona_counsel.logic.asyncio.run", side_effect=fake_run),
         ):
             result = runner.invoke(
                 app,

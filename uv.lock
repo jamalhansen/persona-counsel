@@ -1236,7 +1236,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/0e/72/a3add0e4eec4eb9e2
 [[package]]
 name = "local-first-common"
 version = "0.1.0"
-source = { editable = "../local-first-common" }
+source = { git = "https://github.com/jamalhansen/local-first-common.git?branch=main#60e8d6ca3572321332d69db568ecfa27d19be3a9" }
 dependencies = [
     { name = "httpx" },
     { name = "langdetect" },
@@ -1246,20 +1246,6 @@ dependencies = [
     { name = "pyyaml" },
     { name = "typer" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "langdetect", specifier = ">=1.0.9" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pydantic-settings", specifier = ">=2.13.1" },
-    { name = "python-frontmatter", specifier = ">=1.1.0" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "typer", specifier = ">=0.24.1" },
-]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.0.2" }]
 
 [[package]]
 name = "logfire"
@@ -1670,7 +1656,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "local-first-common", editable = "../local-first-common" },
+    { name = "local-first-common", git = "https://github.com/jamalhansen/local-first-common.git?branch=main" },
     { name = "pydantic-ai", specifier = ">=1.68.0" },
     { name = "python-frontmatter", specifier = ">=1.1.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
