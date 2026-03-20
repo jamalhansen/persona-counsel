@@ -36,128 +36,67 @@ cd persona-counsel
 uv sync
 ```
 
-Persona YAML files must be present at `~/.config/local-first/personas/`. The 8 starter personas are part of the local-first-common setup. If missing, run `--list-personas` to diagnose.
-
 ## Usage
 
 ```bash
-# Dry run -- print to terminal, do not write a file
-uv run counsel --dry-run
+# Evaluate current month's goals (ollama default)
+uv run python src/main.py
 
-# Evaluate current month, write to reviews folder
-uv run counsel
+# Evaluate a specific week
+uv run python src/main.py --week 2026-W11
 
-# Specific month
-uv run counsel --month 2026-03
+# Use Anthropic for a higher-quality synthesis
+uv run python src/main.py --provider anthropic
 
-# With prior month for context
-uv run counsel --month 2026-03 --prior 2026-02
-
-# Choose a different provider or model
-uv run counsel --provider anthropic
-uv run counsel --provider ollama --model llama3.1:8b
+# Dry run: print report to terminal instead of writing to vault
+uv run python src/main.py --dry-run
 
 # Override persona weights for this run (default 1.0)
-uv run counsel --weight solomon=1.5 --weight hiro=0.8
+uv run python src/main.py --weight solomon=1.5 --weight hiro=0.8
 
 # List available personas
-uv run counsel --list-personas
+uv run python src/main.py --list-personas
 ```
 
-## CLI reference
+## CLI Reference
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--month YYYY-MM` | `-m` | Month to evaluate. Defaults to current month. |
-| `--prior YYYY-MM` | | Prior month for context (trends, carry-over). |
-| `--provider NAME` | `-p` | LLM provider: ollama, anthropic, groq, deepseek, gemini. |
-| `--model NAME` | | Override the provider's default model. |
-| `--dry-run` | `-n` | Print to terminal only, do not write a file. |
-| `--verbose` | `-v` | Show extra progress output. |
-| `--vault PATH` | | Override the Obsidian vault path. |
-| `--weight name=value` | `-w` | Override a persona's weight. Repeatable. |
-| `--list-personas` | | List available personas and exit. |
+All tools in this series share a common set of CLI flags for model management via [local-first-common](https://github.com/jamalhansen/local-first-common).
 
-## Provider defaults
+| Flag | Short | Default | Description |
+|---|---|---|---|
+| `--month` | `-m` | current | Month to evaluate (YYYY-MM) |
+| `--week` | | — | ISO week to evaluate (YYYY-WNN) |
+| `--year` | | — | Year to evaluate (YYYY) |
+| `--provider` | `-p` | `ollama` | LLM provider (`ollama`, `anthropic`, `gemini`, `groq`, `deepseek`) |
+| `--model` | | provider default | Override provider's default model |
+| `--dry-run` | `-n` | off | Print to terminal, do not write to vault |
+| `--verbose` | `-v` | off | Show extra progress output |
+| `--debug` | `-d` | off | Show raw prompts and LLM responses |
+| `--weight` | `-w` | 1.0 | Override a persona's weight (e.g. `solomon=1.5`). Repeatable. |
+| `--list-personas` | | — | List available personas and exit. |
 
-| Provider | Default model |
-|----------|---------------|
-| ollama | phi4-mini |
-| anthropic | claude-haiku-4-5-20251001 |
-| groq | llama-3.3-70b-versatile |
-| deepseek | deepseek-chat |
-| gemini | gemini-2.0-flash |
+## Project Structure
 
-## Output
-
-Without `--dry-run`, the report is written to:
-
-```
-Goals/YYYY/_monthly/reviews/YYYY-MM-council.md
-```
-
-The reviews directory is created automatically if it does not exist.
-
-Report sections:
-
-- **Consensus** -- 3-5 sentence synthesis from all perspectives
-- **Tensions** -- where personas disagreed and why it matters
-- **Priorities** -- what the council collectively recommends
-- **Coyote Says** -- Coyote's independent take, surfaced separately
-- **Individual Evaluations** -- each persona's full assessment, concerns, recommendations, and key question
-
-## Architecture
-
-```
-Monthly goals file
-  |
-  +-- Solomon  (parallel)  --> PersonaEvaluation
-  +-- Hiro     (parallel)  --> PersonaEvaluation
-  +-- Zora     (parallel)  --> PersonaEvaluation
-  +-- Silas    (parallel)  --> PersonaEvaluation
-  +-- Ada      (parallel)  --> PersonaEvaluation
-  +-- Nneka    (parallel)  --> PersonaEvaluation
-  +-- Eli      (parallel)  --> PersonaEvaluation
-  +-- Coyote   (parallel)  --> PersonaEvaluation
-  |
-  +-- Synthesis agent (receives all 8) --> CouncilSynthesis
-```
-
-- PydanticAI agents with `output_type` for structured output
-- `asyncio.gather()` for parallel persona evaluation
-- No persona sees another's output before synthesis
-- Coyote is mechanically identical to every other persona -- chaos comes from its system prompt
-
-## Persona store
-
-Personas live in `~/.config/local-first/personas/` as YAML files, loaded via `local-first-common.personas`. Other tools can consume the same persona store.
-
-The `LOCAL_FIRST_PERSONAS_DIR` environment variable overrides the default location.
-
-## Project structure
+This tool follows the [Local-First AI project blueprint](https://github.com/jamalhansen/local-first-common).
 
 ```
 persona-counsel/
-├── src/persona_counsel/
-│   ├── cli.py             Typer app and entry point
-│   ├── council.py         Parallel evaluation + synthesis orchestration
-│   ├── goals.py           Load monthly goals from Obsidian vault
-│   ├── model_factory.py   Map provider/model flags to pydantic-ai Models
-│   ├── models.py          PersonaEvaluation and CouncilSynthesis
-│   └── renderer.py        Render results as markdown
+├── src/
+│   ├── main.py           # Typer CLI entry point
+│   ├── logic.py          # Core council orchestration
+│   ├── council.py        # Persona execution logic
+│   ├── models.py         # Pydantic models for evaluations
+│   ├── renderer.py       # Markdown report generator
+│   ├── goals.py          # Load monthly goals from Obsidian vault
+│   └── model_factory.py  # Provider/model resolution
+├── pyproject.toml        # Managed by uv
 └── tests/
-    ├── test_cli.py
-    ├── test_council.py
-    ├── test_goals.py
-    ├── test_model_factory.py
-    ├── test_models.py
-    └── test_renderer.py
+    ├── test_main.py      # CLI integration tests via MockProvider
+    └── ...
 ```
 
-## Testing
+## Running Tests
 
 ```bash
 uv run pytest
 ```
-
-The test suite uses pydantic-ai's `TestModel` to stub LLM calls. No real API calls are made.
