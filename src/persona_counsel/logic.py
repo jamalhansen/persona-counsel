@@ -122,14 +122,8 @@ def main(
         Optional[str],
         typer.Option("--model", help="Override the provider's default model."),
     ] = None,
-    dry_run: Annotated[
-        bool,
-        dry_run_option(),
-    ] = False,
-    no_llm: Annotated[
-        bool,
-        no_llm_option(),
-    ] = False,
+    dry_run: bool = dry_run_option(),
+    no_llm: bool = no_llm_option(),
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Show extra progress output."),
