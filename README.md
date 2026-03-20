@@ -49,7 +49,7 @@ uv run python src/main.py --week 2026-W11
 uv run python src/main.py --provider anthropic
 
 # Dry run: print report to terminal instead of writing to vault
-uv run python src/main.py --dry-run
+uv run python src/main.py --dry-run -n: Call LLM but do not save results. Print to stdout.
 
 # Override persona weights for this run (default 1.0)
 uv run python src/main.py --weight solomon=1.5 --weight hiro=0.8
@@ -69,7 +69,7 @@ All tools in this series share a common set of CLI flags for model management vi
 | `--year` | | — | Year to evaluate (YYYY) |
 | `--provider` | `-p` | `ollama` | LLM provider (`ollama`, `anthropic`, `gemini`, `groq`, `deepseek`) |
 | `--model` | | provider default | Override provider's default model |
-| `--dry-run` | `-n` | off | Print to terminal, do not write to vault |
+| `--dry-run -n: Call LLM but do not save results. Print to stdout.
 | `--verbose` | `-v` | off | Show extra progress output |
 | `--debug` | `-d` | off | Show raw prompts and LLM responses |
 | `--weight` | `-w` | 1.0 | Override a persona's weight (e.g. `solomon=1.5`). Repeatable. |

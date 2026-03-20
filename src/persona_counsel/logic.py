@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+from local_first_common.cli import (
+    dry_run_option,
+    no_llm_option,
+)
 from local_first_common.obsidian import find_vault_root
 from local_first_common.personas import list_personas
 from rich.console import Console
@@ -120,7 +124,11 @@ def main(
     ] = None,
     dry_run: Annotated[
         bool,
-        typer.Option("--dry-run", "-n", help="Print to terminal only, do not write a file."),
+        dry_run_option(),
+    ] = False,
+    no_llm: Annotated[
+        bool,
+        no_llm_option(),
     ] = False,
     verbose: Annotated[
         bool,
@@ -240,12 +248,19 @@ def main(
         err_console.print("[red]Error:[/red] No personas found. Run --list-personas to diagnose.")
         raise typer.Exit(1)
 
+    if no_llm:
+        dry_run = True
+
     # Build model
-    try:
-        pai_model = build_model(provider, model)
-    except ValueError as e:
-        err_console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
+    if no_llm:
+        from local_first_common.testing import MockProvider
+        pai_model = MockProvider()
+    else:
+        try:
+            pai_model = build_model(provider, model)
+        except ValueError as e:
+            err_console.print(f"[red]Error:[/red] {e}")
+            raise typer.Exit(1)
 
     model_name = model or PROVIDER_DEFAULTS.get(provider, "unknown")
 
