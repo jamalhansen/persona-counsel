@@ -10,7 +10,7 @@ from local_first_common.cli import (
     dry_run_option,
     no_llm_option,
 )
-from local_first_common.tracking import timed_run
+from local_first_common.tracking import register_tool, timed_run
 from local_first_common.obsidian import find_vault_root
 from local_first_common.personas import list_personas
 from rich.console import Console
@@ -31,6 +31,8 @@ from .goals import (
 )
 from .model_factory import PROVIDER_DEFAULTS, VALID_PROVIDERS, build_model
 from .renderer import render_report
+
+_TOOL = register_tool("persona-counsel")
 
 app = typer.Typer(help="Run your goals through a council of named personas.")
 console = Console()
