@@ -10,6 +10,7 @@ from local_first_common.cli import (
     dry_run_option,
     no_llm_option,
 )
+from local_first_common.tracking import timed_run
 from local_first_common.obsidian import find_vault_root
 from local_first_common.personas import list_personas
 from rich.console import Console
@@ -266,12 +267,14 @@ def main(
 
     # Run the council
     try:
-        evaluations, synthesis = asyncio.run(
-            run_council(
-                council_personas, goals_text, prior_text, pai_model, weights,
-                concurrency, prior_report_text,
+        with timed_run("persona-counsel", f"{provider}:{model_name}", source_location=period) as _run:
+            evaluations, synthesis = asyncio.run(
+                run_council(
+                    council_personas, goals_text, prior_text, pai_model, weights,
+                    concurrency, prior_report_text,
+                )
             )
-        )
+            _run.item_count = len(council_personas)
     except Exception as e:
         err_console.print(f"[red]Council run failed:[/red] {e}")
         if verbose:
