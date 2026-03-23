@@ -9,6 +9,7 @@ import typer
 from local_first_common.cli import (
     dry_run_option,
     no_llm_option,
+    resolve_dry_run,
 )
 from local_first_common.tracking import register_tool, timed_run
 from local_first_common.obsidian import find_vault_root
@@ -29,7 +30,7 @@ from .goals import (
     load_weekly_goals,
     weekly_output_path,
 )
-from .model_factory import PROVIDER_DEFAULTS, VALID_PROVIDERS, build_model
+from .model_factory import build_model, PROVIDER_DEFAULTS, VALID_PROVIDERS
 from .renderer import render_report
 
 _TOOL = register_tool("persona-counsel")
@@ -245,19 +246,14 @@ def main(
         err_console.print("[red]Error:[/red] No personas found. Run --list-personas to diagnose.")
         raise typer.Exit(1)
 
-    if no_llm:
-        dry_run = True
+    dry_run = resolve_dry_run(dry_run, no_llm)
 
-    # Build model
-    if no_llm:
-        from local_first_common.testing import MockProvider
-        pai_model = MockProvider()
-    else:
-        try:
-            pai_model = build_model(provider, model)
-        except ValueError as e:
-            err_console.print(f"[red]Error:[/red] {e}")
-            raise typer.Exit(1)
+    # Resolve provider (uses pydantic-ai model, not BaseProvider)
+    try:
+        pai_model = build_model(provider, model)
+    except Exception as e:
+        err_console.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
 
     model_name = model or PROVIDER_DEFAULTS.get(provider, "unknown")
 
@@ -290,10 +286,12 @@ def main(
     if dry_run:
         console.print("\n")
         console.print(Markdown(report))
-        return
 
     # Write to file
     output_path = output_fn(period, vault_root=vault_root)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(report, encoding="utf-8")
-    console.print(f"\n[green]Written:[/green] {output_path}")
+    if not dry_run:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(report, encoding="utf-8")
+        console.print(f"\n[green]Written:[/green] {output_path}")
+    else:
+        console.print(f"\n[dim][dry-run] Would have written to: {output_path}[/dim]")
