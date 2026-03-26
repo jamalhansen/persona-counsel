@@ -29,12 +29,14 @@ class TestBuildModel:
         model = build_model("ollama", "llama3.2:3b")
         assert isinstance(model, OpenAIChatModel)
 
-    def test_anthropic_returns_anthropic_model(self):
+    def test_anthropic_returns_anthropic_model(self, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key")
         from pydantic_ai.models.anthropic import AnthropicModel
         model = build_model("anthropic", None)
         assert isinstance(model, AnthropicModel)
 
-    def test_groq_returns_groq_model(self):
+    def test_groq_returns_groq_model(self, monkeypatch):
+        monkeypatch.setenv("GROQ_API_KEY", "fake-key")
         from pydantic_ai.models.groq import GroqModel
         model = build_model("groq", None)
         assert isinstance(model, GroqModel)
