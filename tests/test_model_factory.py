@@ -40,3 +40,19 @@ class TestBuildModel:
         from pydantic_ai.models.groq import GroqModel
         model = build_model("groq", None)
         assert isinstance(model, GroqModel)
+
+    def test_deepseek_returns_openai_chat_model(self):
+        from pydantic_ai.models.openai import OpenAIChatModel
+        model = build_model("deepseek", None)
+        assert isinstance(model, OpenAIChatModel)
+
+    def test_gemini_returns_google_model(self, monkeypatch):
+        monkeypatch.setenv("GOOGLE_API_KEY", "fake-key")
+        from pydantic_ai.models.google import GoogleModel
+        model = build_model("gemini", None)
+        assert isinstance(model, GoogleModel)
+
+    def test_mock_returns_test_model(self):
+        from pydantic_ai.models.test import TestModel
+        model = build_model("mock", None)
+        assert isinstance(model, TestModel)

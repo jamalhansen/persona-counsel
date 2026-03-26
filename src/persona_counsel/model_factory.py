@@ -8,6 +8,7 @@ PROVIDER_DEFAULTS: dict[str, str] = {
     "groq": "llama-3.3-70b-versatile",
     "deepseek": "deepseek-chat",
     "gemini": "gemini-2.0-flash",
+    "mock": "test-model",
 }
 
 VALID_PROVIDERS = list(PROVIDER_DEFAULTS.keys())
@@ -59,5 +60,10 @@ def build_model(provider: str, model_name: str | None) -> Any:
         from pydantic_ai.models.google import GoogleModel
 
         return GoogleModel(model)
+
+    if provider == "mock":
+        from pydantic_ai.models.test import TestModel
+
+        return TestModel()
 
     raise ValueError(f"Unknown provider '{provider}'")
