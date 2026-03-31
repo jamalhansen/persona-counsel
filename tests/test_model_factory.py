@@ -1,7 +1,7 @@
 """Tests for model_factory.py."""
 import pytest
 
-from persona_counsel.model_factory import PROVIDER_DEFAULTS, VALID_PROVIDERS, build_model
+from local_first_common.pydantic_ai_utils import PROVIDER_DEFAULTS, VALID_PROVIDERS, build_model
 
 
 class TestBuildModel:

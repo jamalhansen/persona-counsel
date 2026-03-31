@@ -30,7 +30,7 @@ from .goals import (
     load_weekly_goals,
     weekly_output_path,
 )
-from .model_factory import build_model, PROVIDER_DEFAULTS, VALID_PROVIDERS
+from local_first_common.pydantic_ai_utils import build_model, PROVIDER_DEFAULTS, VALID_PROVIDERS
 from .renderer import render_report
 
 _TOOL = register_tool("persona-counsel")
