@@ -17,3 +17,12 @@ uv.toml
 
 # macOS
 .DS_Store
+
+# Workspace standard ignores
+*.pyc
+*.pyd
+*.pyo
+.coverage
+.pytest_cache/
+.ruff_cache/
+.venv/
