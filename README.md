@@ -40,25 +40,25 @@ uv sync
 
 ```bash
 # Evaluate current month's goals (ollama default)
-uv run python src/main.py
+uv run counsel
 
 # Evaluate a specific week
-uv run python src/main.py --week 2026-W11
+uv run counsel --week 2026-W11
 
 # Use Anthropic for a higher-quality synthesis
-uv run python src/main.py --provider anthropic
+uv run counsel --provider anthropic
 
 # Dry run: print report to terminal instead of writing to vault
-uv run python src/main.py --dry-run
+uv run counsel --dry-run
 
 # Skip LLM entirely (for testing CLI args without inference)
-uv run python src/main.py --no-llm
+uv run counsel --no-llm
 
 # Override persona weights for this run (default 1.0)
-uv run python src/main.py --weight solomon=1.5 --weight hiro=0.8
+uv run counsel --weight solomon=1.5 --weight hiro=0.8
 
 # List available personas
-uv run python src/main.py --list-personas
+uv run counsel --list-personas
 ```
 
 ## CLI Reference
