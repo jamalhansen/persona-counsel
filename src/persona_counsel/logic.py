@@ -167,11 +167,11 @@ def main(
 
     # Handle --list-personas
     if list_personas_flag:
-        personas = list_personas()
+        personas = list_personas("Counsel", vault_path=vault)
         if not personas:
-            err_console.print("[yellow]No personas found. Check ~/.config/local-first/personas/[/yellow]")
+            err_console.print("[yellow]No personas found. Check OBSIDIAN_VAULT_PATH/personas/Counsel or ~/.config/local-first/personas/Counsel[/yellow]")
             raise typer.Exit(1)
-        console.print("\n[bold]Available personas:[/bold]\n")
+        console.print("\n[bold]Available personas (Counsel):[/bold]\n")
         for p in personas:
             console.print(f"  [cyan]{p.name}[/cyan] ({p.archetype}) -- {p.domain}")
         console.print()
@@ -235,7 +235,7 @@ def main(
             err_console.print(f"[yellow]Warning:[/yellow] {e}")
 
     # Load personas
-    all_personas = list_personas()
+    all_personas = list_personas("Counsel", vault_path=vault_root)
     council_personas = [p for p in all_personas if p.name.lower() in COUNCIL_PERSONA_NAMES]
     missing = set(COUNCIL_PERSONA_NAMES) - {p.name.lower() for p in council_personas}
     if missing:
@@ -243,7 +243,7 @@ def main(
             f"[yellow]Warning:[/yellow] Missing personas: {', '.join(sorted(missing))}"
         )
     if not council_personas:
-        err_console.print("[red]Error:[/red] No personas found. Run --list-personas to diagnose.")
+        err_console.print("[red]Error:[/red] No personas found in category 'Counsel'. Run --list-personas to diagnose.")
         raise typer.Exit(1)
 
     dry_run = resolve_dry_run(dry_run, no_llm)
