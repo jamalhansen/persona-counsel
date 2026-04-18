@@ -7,10 +7,13 @@ from typing import Annotated, Optional
 
 import typer
 from local_first_common.cli import (
+    init_config_option,
+    init_config_option,
     dry_run_option,
     no_llm_option,
     resolve_dry_run,
 )
+from local_first_common.config import get_setting
 from local_first_common.tracking import register_tool, timed_run
 from local_first_common.obsidian import find_vault_root
 from local_first_common.personas import list_personas
@@ -34,6 +37,8 @@ from local_first_common.pydantic_ai_utils import build_model, PROVIDER_DEFAULTS,
 from .renderer import render_report
 
 _TOOL = register_tool("persona-counsel")
+TOOL_NAME = "persona-counsel"
+DEFAULTS = {"provider": "ollama", "model": "llama3"}
 
 app = typer.Typer(help="Run your goals through a council of named personas.")
 console = Console()
