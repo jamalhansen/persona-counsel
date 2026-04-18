@@ -6,19 +6,21 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+from rich.console import Console
+from rich.markdown import Markdown
+
 from local_first_common.cli import (
-    init_config_option,
     init_config_option,
     dry_run_option,
     no_llm_option,
     resolve_dry_run,
+    provider_option,
+    model_option,
 )
-from local_first_common.config import get_setting
 from local_first_common.tracking import register_tool, timed_run
 from local_first_common.obsidian import find_vault_root
 from local_first_common.personas import list_personas
-from rich.console import Console
-from rich.markdown import Markdown
+from local_first_common.pydantic_ai_utils import build_model, PROVIDER_DEFAULTS
 
 from .council import run_council
 from .goals import (
@@ -33,12 +35,11 @@ from .goals import (
     load_weekly_goals,
     weekly_output_path,
 )
-from local_first_common.pydantic_ai_utils import build_model, PROVIDER_DEFAULTS, VALID_PROVIDERS
 from .renderer import render_report
 
-_TOOL = register_tool("persona-counsel")
 TOOL_NAME = "persona-counsel"
 DEFAULTS = {"provider": "ollama", "model": "llama3"}
+_TOOL = register_tool("persona-counsel")
 
 app = typer.Typer(help="Run your goals through a council of named personas.")
 console = Console()
@@ -93,74 +94,49 @@ def _validate_scope(month: Optional[str], week: Optional[str], year: Optional[st
 
 @app.command()
 def main(
-    month: Annotated[
-        Optional[str],
-        typer.Option("--month", "-m", help="Month to evaluate (YYYY-MM). Defaults to current month."),
-    ] = None,
-    week: Annotated[
-        Optional[str],
-        typer.Option("--week", help="ISO week to evaluate (YYYY-WNN, e.g. 2026-W10)."),
-    ] = None,
-    year: Annotated[
-        Optional[str],
-        typer.Option("--year", help="Year to evaluate (YYYY, e.g. 2026)."),
-    ] = None,
-    prior: Annotated[
-        Optional[str],
-        typer.Option(
-            "--prior",
-            help="Prior period goals note for context (YYYY-MM / YYYY-WNN / YYYY).",
-        ),
-    ] = None,
-    prior_report: Annotated[
-        Optional[str],
-        typer.Option(
-            "--prior-report",
-            help="Prior council report for context — lets personas see what was recommended last time (YYYY-MM / YYYY-WNN / YYYY).",
-        ),
-    ] = None,
-    provider: Annotated[
-        str,
-        typer.Option(
-            "--provider",
-            "-p",
-            help=f"LLM provider. Choices: {', '.join(VALID_PROVIDERS)}",
-        ),
-    ] = os.environ.get("MODEL_PROVIDER", "ollama"),
-    model: Annotated[
-        Optional[str],
-        typer.Option("--model", help="Override the provider's default model."),
-    ] = None,
-    dry_run: bool = dry_run_option(),
-    no_llm: bool = no_llm_option(),
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Show extra progress output."),
-    ] = False,
-    vault: Annotated[
-        Optional[Path],
-        typer.Option("--vault", help="Override the Obsidian vault path."),
-    ] = None,
-    weight: Annotated[
-        Optional[list[str]],
-        typer.Option(
-            "--weight",
-            "-w",
-            help="Override persona weight (e.g. --weight solomon=1.5). Repeatable.",
-        ),
-    ] = None,
-    concurrency: Annotated[
-        int,
-        typer.Option(
-            "--concurrency",
-            "-c",
-            help="Max parallel API calls (lower = fewer rate-limit errors, default 3).",
-        ),
-    ] = 3,
-    list_personas_flag: Annotated[
-        bool,
-        typer.Option("--list-personas", help="List available personas and exit."),
-    ] = False,
+    month: Optional[str] = typer.Option(
+        None, "--month", "-m", help="Month to evaluate (YYYY-MM). Defaults to current month."
+    ),
+    week: Optional[str] = typer.Option(
+        None, "--week", help="ISO week to evaluate (YYYY-WNN, e.g. 2026-W10)."
+    ),
+    year: Optional[str] = typer.Option(
+        None, "--year", help="Year to evaluate (YYYY, e.g. 2026)."
+    ),
+    prior: Optional[str] = typer.Option(
+        None,
+        "--prior",
+        help="Prior period goals note for context (YYYY-MM / YYYY-WNN / YYYY).",
+    ),
+    prior_report: Optional[str] = typer.Option(
+        None,
+        "--prior-report",
+        help="Prior council report for context — lets personas see what was recommended last time (YYYY-MM / YYYY-WNN / YYYY).",
+    ),
+    provider: Annotated[str, provider_option()] = os.environ.get("MODEL_PROVIDER", "ollama"),
+    model: Annotated[Optional[str], model_option()] = None,
+    dry_run: Annotated[bool, dry_run_option()] = False,
+    no_llm: Annotated[bool, no_llm_option()] = False,
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show extra progress output."
+    ),
+    vault: Optional[Path] = typer.Option(None, "--vault", help="Override the Obsidian vault path."),
+    weight: Optional[list[str]] = typer.Option(
+        None,
+        "--weight",
+        "-w",
+        help="Override persona weight (e.g. --weight solomon=1.5). Repeatable.",
+    ),
+    concurrency: int = typer.Option(
+        3,
+        "--concurrency",
+        "-c",
+        help="Max parallel API calls (lower = fewer rate-limit errors, default 3).",
+    ),
+    list_personas_flag: bool = typer.Option(
+        False, "--list-personas", help="List available personas and exit."
+    ),
+    init_config: Annotated[bool, init_config_option(TOOL_NAME, DEFAULTS)] = False,
 ) -> None:
     """Run your goals through the council and receive a qualitative synthesis.
 
