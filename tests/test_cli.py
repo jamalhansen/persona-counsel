@@ -1,11 +1,19 @@
 """Tests for the Typer CLI."""
+
 import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
 
-from persona_counsel.logic import app, _parse_weight
+from persona_counsel.logic import (
+    CouncilRunError,
+    ModelBuildError,
+    _build_model_or_raise,
+    _parse_weight,
+    _run_council_or_raise,
+    app,
+)
 from persona_counsel.models import CouncilSynthesis, PersonaEvaluation
 
 runner = CliRunner()
@@ -54,11 +62,13 @@ class TestParseWeight:
 
     def test_invalid_format_raises(self):
         import typer
+
         with pytest.raises(typer.BadParameter):
             _parse_weight("no_equals_sign")
 
     def test_invalid_float_raises(self):
         import typer
+
         with pytest.raises((typer.BadParameter, ValueError)):
             _parse_weight("solomon=not_a_number")
 
@@ -77,23 +87,60 @@ class TestListPersonasFlag:
 
 class TestValidateScope:
     def test_both_month_and_week_rejected(self, tmp_path):
-        result = runner.invoke(app, ["--month", "2026-03", "--week", "2026-W10", "--dry-run", "--vault", str(tmp_path)])
+        result = runner.invoke(
+            app,
+            [
+                "--month",
+                "2026-03",
+                "--week",
+                "2026-W10",
+                "--dry-run",
+                "--vault",
+                str(tmp_path),
+            ],
+        )
         assert result.exit_code == 1
 
     def test_both_month_and_year_rejected(self, tmp_path):
-        result = runner.invoke(app, ["--month", "2026-03", "--year", "2026", "--dry-run", "--vault", str(tmp_path)])
+        result = runner.invoke(
+            app,
+            [
+                "--month",
+                "2026-03",
+                "--year",
+                "2026",
+                "--dry-run",
+                "--vault",
+                str(tmp_path),
+            ],
+        )
         assert result.exit_code == 1
 
     def test_both_week_and_year_rejected(self, tmp_path):
-        result = runner.invoke(app, ["--week", "2026-W10", "--year", "2026", "--dry-run", "--vault", str(tmp_path)])
+        result = runner.invoke(
+            app,
+            [
+                "--week",
+                "2026-W10",
+                "--year",
+                "2026",
+                "--dry-run",
+                "--vault",
+                str(tmp_path),
+            ],
+        )
         assert result.exit_code == 1
 
     def test_invalid_week_format_rejected(self, tmp_path):
-        result = runner.invoke(app, ["--week", "W10-2026", "--dry-run", "--vault", str(tmp_path)])
+        result = runner.invoke(
+            app, ["--week", "W10-2026", "--dry-run", "--vault", str(tmp_path)]
+        )
         assert result.exit_code == 1
 
     def test_invalid_year_format_rejected(self, tmp_path):
-        result = runner.invoke(app, ["--year", "26", "--dry-run", "--vault", str(tmp_path)])
+        result = runner.invoke(
+            app, ["--year", "26", "--dry-run", "--vault", str(tmp_path)]
+        )
         assert result.exit_code == 1
 
 
@@ -122,7 +169,10 @@ class TestMainCommand:
     def test_dry_run_prints_to_terminal(self, tmp_path):
         vault = self._mock_run(tmp_path)
         with (
-            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch(
+                "persona_counsel.logic.list_personas",
+                return_value=[make_persona_mock()],
+            ),
             patch("persona_counsel.logic.build_model"),
             patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
@@ -132,36 +182,54 @@ class TestMainCommand:
         assert result.exit_code == 0
 
     def test_missing_goals_exits_with_error(self, tmp_path):
-        result = runner.invoke(app, ["--month", "2026-03", "--dry-run", "--vault", str(tmp_path)])
+        result = runner.invoke(
+            app, ["--month", "2026-03", "--dry-run", "--vault", str(tmp_path)]
+        )
         assert result.exit_code == 1
 
     def test_writes_file_without_dry_run(self, tmp_path):
         vault = self._mock_run(tmp_path)
         with (
-            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch(
+                "persona_counsel.logic.list_personas",
+                return_value=[make_persona_mock()],
+            ),
             patch("persona_counsel.logic.build_model"),
             patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
-            result = runner.invoke(
-                app, ["--month", "2026-03", "--vault", str(vault)]
-            )
+            result = runner.invoke(app, ["--month", "2026-03", "--vault", str(vault)])
         assert result.exit_code == 0
-        output_file = vault / "Goals" / "2026" / "_monthly" / "reviews" / "2026-03-council.md"
+        output_file = (
+            vault / "Goals" / "2026" / "_monthly" / "reviews" / "2026-03-council.md"
+        )
         assert output_file.exists()
 
     def test_invalid_provider_exits_with_error(self, tmp_path):
         vault = self._mock_run(tmp_path)
-        with patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]):
+        with patch(
+            "persona_counsel.logic.list_personas", return_value=[make_persona_mock()]
+        ):
             result = runner.invoke(
                 app,
-                ["--month", "2026-03", "--dry-run", "--vault", str(vault), "--provider", "badprovider"],
+                [
+                    "--month",
+                    "2026-03",
+                    "--dry-run",
+                    "--vault",
+                    str(vault),
+                    "--provider",
+                    "badprovider",
+                ],
             )
         assert result.exit_code == 1
 
     def test_week_dry_run_prints_to_terminal(self, tmp_path):
         vault = self._mock_week_run(tmp_path)
         with (
-            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch(
+                "persona_counsel.logic.list_personas",
+                return_value=[make_persona_mock()],
+            ),
             patch("persona_counsel.logic.build_model"),
             patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
@@ -173,25 +241,33 @@ class TestMainCommand:
     def test_week_writes_to_weekly_path(self, tmp_path):
         vault = self._mock_week_run(tmp_path)
         with (
-            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch(
+                "persona_counsel.logic.list_personas",
+                return_value=[make_persona_mock()],
+            ),
             patch("persona_counsel.logic.build_model"),
             patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
-            result = runner.invoke(
-                app, ["--week", "2026-W10", "--vault", str(vault)]
-            )
+            result = runner.invoke(app, ["--week", "2026-W10", "--vault", str(vault)])
         assert result.exit_code == 0
-        output_file = vault / "Goals" / "2026" / "_weekly" / "reviews" / "2026-W10-council.md"
+        output_file = (
+            vault / "Goals" / "2026" / "_weekly" / "reviews" / "2026-W10-council.md"
+        )
         assert output_file.exists()
 
     def test_week_missing_goals_exits_with_error(self, tmp_path):
-        result = runner.invoke(app, ["--week", "2026-W10", "--dry-run", "--vault", str(tmp_path)])
+        result = runner.invoke(
+            app, ["--week", "2026-W10", "--dry-run", "--vault", str(tmp_path)]
+        )
         assert result.exit_code == 1
 
     def test_year_dry_run_prints_to_terminal(self, tmp_path):
         vault = self._mock_year_run(tmp_path)
         with (
-            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch(
+                "persona_counsel.logic.list_personas",
+                return_value=[make_persona_mock()],
+            ),
             patch("persona_counsel.logic.build_model"),
             patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
@@ -203,31 +279,47 @@ class TestMainCommand:
     def test_year_writes_to_annual_path(self, tmp_path):
         vault = self._mock_year_run(tmp_path)
         with (
-            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch(
+                "persona_counsel.logic.list_personas",
+                return_value=[make_persona_mock()],
+            ),
             patch("persona_counsel.logic.build_model"),
             patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
-            result = runner.invoke(
-                app, ["--year", "2026", "--vault", str(vault)]
-            )
+            result = runner.invoke(app, ["--year", "2026", "--vault", str(vault)])
         assert result.exit_code == 0
-        output_file = vault / "Goals" / "2026" / "_annual" / "reviews" / "2026-council.md"
+        output_file = (
+            vault / "Goals" / "2026" / "_annual" / "reviews" / "2026-council.md"
+        )
         assert output_file.exists()
 
     def test_year_missing_goals_exits_with_error(self, tmp_path):
-        result = runner.invoke(app, ["--year", "2026", "--dry-run", "--vault", str(tmp_path)])
+        result = runner.invoke(
+            app, ["--year", "2026", "--dry-run", "--vault", str(tmp_path)]
+        )
         assert result.exit_code == 1
 
     def test_prior_report_missing_warns_but_continues(self, tmp_path):
         vault = self._mock_run(tmp_path)
         with (
-            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch(
+                "persona_counsel.logic.list_personas",
+                return_value=[make_persona_mock()],
+            ),
             patch("persona_counsel.logic.build_model"),
             patch("persona_counsel.logic.asyncio.run", side_effect=fake_async_run),
         ):
             result = runner.invoke(
                 app,
-                ["--month", "2026-03", "--prior-report", "2026-02", "--dry-run", "--vault", str(vault)],
+                [
+                    "--month",
+                    "2026-03",
+                    "--prior-report",
+                    "2026-02",
+                    "--dry-run",
+                    "--vault",
+                    str(vault),
+                ],
             )
         # Missing report should warn but not abort
         assert result.exit_code == 0
@@ -235,7 +327,9 @@ class TestMainCommand:
     def test_prior_report_loads_and_passes_through(self, tmp_path):
         vault = self._mock_run(tmp_path)
         # Write a fake prior council report
-        report_path = vault / "Goals" / "2026" / "_monthly" / "reviews" / "2026-02-council.md"
+        report_path = (
+            vault / "Goals" / "2026" / "_monthly" / "reviews" / "2026-02-council.md"
+        )
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text("# February Council\nConsensus: fine.", encoding="utf-8")
 
@@ -248,12 +342,40 @@ class TestMainCommand:
             return [MOCK_EVALUATION], MOCK_SYNTHESIS
 
         with (
-            patch("persona_counsel.logic.list_personas", return_value=[make_persona_mock()]),
+            patch(
+                "persona_counsel.logic.list_personas",
+                return_value=[make_persona_mock()],
+            ),
             patch("persona_counsel.logic.build_model"),
             patch("persona_counsel.logic.asyncio.run", side_effect=fake_run),
         ):
             result = runner.invoke(
                 app,
-                ["--month", "2026-03", "--prior-report", "2026-02", "--dry-run", "--vault", str(vault)],
+                [
+                    "--month",
+                    "2026-03",
+                    "--prior-report",
+                    "2026-02",
+                    "--dry-run",
+                    "--vault",
+                    str(vault),
+                ],
             )
         assert result.exit_code == 0
+
+
+class TestStrictHelpers:
+    def test_build_model_or_raise_wraps_errors(self):
+        with patch(
+            "persona_counsel.logic.build_model", side_effect=RuntimeError("bad model")
+        ):
+            with pytest.raises(ModelBuildError, match="bad model"):
+                _build_model_or_raise("ollama", None)
+
+    def test_run_council_or_raise_wraps_errors(self):
+        async def _boom(*args, **kwargs):
+            raise RuntimeError("council blew up")
+
+        with patch("persona_counsel.logic.run_council", side_effect=_boom):
+            with pytest.raises(CouncilRunError, match="council blew up"):
+                _run_council_or_raise([], "goals", None, MagicMock(), {}, 1, None)

@@ -1,4 +1,5 @@
 """Typer CLI for persona-counsel."""
+
 import asyncio
 import os
 import re
@@ -61,6 +62,18 @@ _WEEK_RE = re.compile(r"^\d{4}-W\d{1,2}$")
 _YEAR_RE = re.compile(r"^\d{4}$")
 
 
+class PersonaCounselError(Exception):
+    """Base error for strict persona-counsel operations."""
+
+
+class ModelBuildError(PersonaCounselError):
+    """Raised when provider/model cannot be initialized."""
+
+
+class CouncilRunError(PersonaCounselError):
+    """Raised when council execution fails."""
+
+
 def _parse_weight(raw: str) -> tuple[str, float]:
     """Parse a 'name=value' weight flag. Returns (name, value)."""
     try:
@@ -72,7 +85,9 @@ def _parse_weight(raw: str) -> tuple[str, float]:
         )
 
 
-def _validate_scope(month: Optional[str], week: Optional[str], year: Optional[str]) -> str:
+def _validate_scope(
+    month: Optional[str], week: Optional[str], year: Optional[str]
+) -> str:
     """Ensure at most one scope flag is set. Return the active scope: 'month', 'week', or 'year'."""
     active = sum(x is not None for x in [month, week, year])
     if active > 1:
@@ -81,21 +96,62 @@ def _validate_scope(month: Optional[str], week: Optional[str], year: Optional[st
         )
     if week is not None:
         if not _WEEK_RE.match(week):
-            raise typer.BadParameter(f"--week must be YYYY-WNN (e.g. 2026-W10), got: {week!r}")
+            raise typer.BadParameter(
+                f"--week must be YYYY-WNN (e.g. 2026-W10), got: {week!r}"
+            )
         return "week"
     if year is not None:
         if not _YEAR_RE.match(year):
             raise typer.BadParameter(f"--year must be YYYY (e.g. 2026), got: {year!r}")
         return "year"
     if month is not None and not _MONTH_RE.match(month):
-        raise typer.BadParameter(f"--month must be YYYY-MM (e.g. 2026-03), got: {month!r}")
+        raise typer.BadParameter(
+            f"--month must be YYYY-MM (e.g. 2026-03), got: {month!r}"
+        )
     return "month"
+
+
+def _build_model_or_raise(provider: str, model: Optional[str]):
+    """Create the pydantic-ai model or raise typed error."""
+    try:
+        return build_model(provider, model)
+    except Exception as e:  # noqa: BLE001
+        raise ModelBuildError(str(e)) from e
+
+
+def _run_council_or_raise(
+    council_personas,
+    goals_text: str,
+    prior_text: Optional[str],
+    pai_model,
+    weights: dict[str, float],
+    concurrency: int,
+    prior_report_text: Optional[str],
+):
+    """Run council and raise typed error on failure."""
+    try:
+        return asyncio.run(
+            run_council(
+                council_personas,
+                goals_text,
+                prior_text,
+                pai_model,
+                weights,
+                concurrency,
+                prior_report_text,
+            )
+        )
+    except Exception as e:  # noqa: BLE001
+        raise CouncilRunError(str(e)) from e
 
 
 @app.command()
 def main(
     month: Optional[str] = typer.Option(
-        None, "--month", "-m", help="Month to evaluate (YYYY-MM). Defaults to current month."
+        None,
+        "--month",
+        "-M",
+        help="Month to evaluate (YYYY-MM). Defaults to current month.",
     ),
     week: Optional[str] = typer.Option(
         None, "--week", help="ISO week to evaluate (YYYY-WNN, e.g. 2026-W10)."
@@ -113,14 +169,18 @@ def main(
         "--prior-report",
         help="Prior council report for context — lets personas see what was recommended last time (YYYY-MM / YYYY-WNN / YYYY).",
     ),
-    provider: Annotated[str, provider_option()] = os.environ.get("MODEL_PROVIDER", "ollama"),
+    provider: Annotated[str, provider_option()] = os.environ.get(
+        "MODEL_PROVIDER", "ollama"
+    ),
     model: Annotated[Optional[str], model_option()] = None,
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Show extra progress output."
     ),
-    vault: Optional[Path] = typer.Option(None, "--vault", help="Override the Obsidian vault path."),
+    vault: Optional[Path] = typer.Option(
+        None, "--vault", help="Override the Obsidian vault path."
+    ),
     weight: Optional[list[str]] = typer.Option(
         None,
         "--weight",
@@ -150,7 +210,9 @@ def main(
     if list_personas_flag:
         personas = list_personas("Counsel", vault_path=vault)
         if not personas:
-            err_console.print("[yellow]No personas found. Check OBSIDIAN_VAULT_PATH/personas/Counsel or ~/.config/local-first/personas/Counsel[/yellow]")
+            err_console.print(
+                "[yellow]No personas found. Check OBSIDIAN_VAULT_PATH/personas/Counsel or ~/.config/local-first/personas/Counsel[/yellow]"
+            )
             raise typer.Exit(1)
         console.print("\n[bold]Available personas (Counsel):[/bold]\n")
         for p in personas:
@@ -181,7 +243,7 @@ def main(
 
     # Parse weights
     weights: dict[str, float] = {}
-    for w in (weight or []):
+    for w in weight or []:
         name, value = _parse_weight(w)
         weights[name] = value
 
@@ -209,7 +271,9 @@ def main(
     prior_report_text: Optional[str] = None
     if prior_report:
         if verbose:
-            console.print(f"[dim]Loading prior council report {prior_report} for context...[/dim]")
+            console.print(
+                f"[dim]Loading prior council report {prior_report} for context...[/dim]"
+            )
         try:
             prior_report_text = load_council_report(prior_report, vault_root=vault_root)
         except (FileNotFoundError, ValueError) as e:
@@ -217,22 +281,26 @@ def main(
 
     # Load personas
     all_personas = list_personas("Counsel", vault_path=vault_root)
-    council_personas = [p for p in all_personas if p.name.lower() in COUNCIL_PERSONA_NAMES]
+    council_personas = [
+        p for p in all_personas if p.name.lower() in COUNCIL_PERSONA_NAMES
+    ]
     missing = set(COUNCIL_PERSONA_NAMES) - {p.name.lower() for p in council_personas}
     if missing:
         err_console.print(
             f"[yellow]Warning:[/yellow] Missing personas: {', '.join(sorted(missing))}"
         )
     if not council_personas:
-        err_console.print("[red]Error:[/red] No personas found in category 'Counsel'. Run --list-personas to diagnose.")
+        err_console.print(
+            "[red]Error:[/red] No personas found in category 'Counsel'. Run --list-personas to diagnose."
+        )
         raise typer.Exit(1)
 
     dry_run = resolve_dry_run(dry_run, no_llm)
 
     # Resolve provider (uses pydantic-ai model, not BaseProvider)
     try:
-        pai_model = build_model(provider, model)
-    except Exception as e:
+        pai_model = _build_model_or_raise(provider, model)
+    except ModelBuildError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)
 
@@ -246,18 +314,24 @@ def main(
 
     # Run the council
     try:
-        with timed_run("persona-counsel", f"{provider}:{model_name}", source_location=period) as _run:
-            evaluations, synthesis = asyncio.run(
-                run_council(
-                    council_personas, goals_text, prior_text, pai_model, weights,
-                    concurrency, prior_report_text,
-                )
+        with timed_run(
+            "persona-counsel", f"{provider}:{model_name}", source_location=period
+        ) as _run:
+            evaluations, synthesis = _run_council_or_raise(
+                council_personas,
+                goals_text,
+                prior_text,
+                pai_model,
+                weights,
+                concurrency,
+                prior_report_text,
             )
             _run.item_count = len(council_personas)
-    except Exception as e:
+    except CouncilRunError as e:
         err_console.print(f"[red]Council run failed:[/red] {e}")
         if verbose:
             import traceback
+
             traceback.print_exc()
         raise typer.Exit(1)
 
