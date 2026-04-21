@@ -15,16 +15,16 @@ The tool informs. You write the actual retrospective.
 
 ## The Council
 
-| Persona | Archetype | Domain | Lens |
-|---------|-----------|--------|------|
-| Solomon | The Elder | Family | Presence and connection |
-| Hiro | The Craftsman | Technical Excellence | Depth and craft |
-| Zora | The Torch | Teaching | Knowledge shared |
-| Silas | The Architect | Financial | Independence trajectory |
-| Ada | The Scout | Growth | New territory entered |
-| Nneka | The Gardener | Health | Body as long-term system |
-| Eli | The Witness | Presence | Month genuinely inhabited |
-| Coyote | The Trickster | Chaos | Honest incongruity |
+| Persona | Archetype     | Domain               | Lens                      |
+| ------- | ------------- | -------------------- | ------------------------- |
+| Solomon | The Elder     | Family               | Presence and connection   |
+| Hiro    | The Craftsman | Technical Excellence | Depth and craft           |
+| Zora    | The Torch     | Teaching             | Knowledge shared          |
+| Silas   | The Architect | Financial            | Independence trajectory   |
+| Ada     | The Scout     | Growth               | New territory entered     |
+| Nneka   | The Gardener  | Health               | Body as long-term system  |
+| Eli     | The Witness   | Presence             | Month genuinely inhabited |
+| Coyote  | The Trickster | Chaos                | Honest incongruity        |
 
 No numeric scores. Output is qualitative narrative only.
 
@@ -65,19 +65,19 @@ uv run counsel --list-personas
 
 All tools in this series share a common set of CLI flags for model management via [local-first-common](https://github.com/jamalhansen/local-first-common).
 
-| Flag | Short | Default | Description |
-|---|---|---|---|
-| `--month` | `-m` | current | Month to evaluate (YYYY-MM) |
-| `--week` | | — | ISO week to evaluate (YYYY-WNN) |
-| `--year` | | — | Year to evaluate (YYYY) |
-| `--provider` | `-p` | `ollama` | LLM provider (`ollama`, `anthropic`, `gemini`, `groq`, `deepseek`) |
-| `--model` | | provider default | Override provider's default model |
-| `--dry-run` | `-n` | false | Call LLM but do not save results to disk/vault/DB. Print to stdout. |
-| `--no-llm` | | false | Skip LLM call, use mock response. Implies `--dry-run`. |
-| `--verbose` | `-v` | off | Show extra progress output |
-| `--debug` | `-d` | off | Show raw prompts and LLM responses |
-| `--weight` | `-w` | 1.0 | Override a persona's weight (e.g. `solomon=1.5`). Repeatable. |
-| `--list-personas` | | — | List available personas and exit. |
+| Flag              | Short | Default          | Description                                                         |
+| ----------------- | ----- | ---------------- | ------------------------------------------------------------------- |
+| `--month`         | `-M`  | current          | Month to evaluate (YYYY-MM)                                         |
+| `--week`          |       | —                | ISO week to evaluate (YYYY-WNN)                                     |
+| `--year`          |       | —                | Year to evaluate (YYYY)                                             |
+| `--provider`      | `-p`  | `ollama`         | LLM provider (`ollama`, `anthropic`, `gemini`, `groq`, `deepseek`)  |
+| `--model`         | `-m`  | provider default | Override provider's default model                                   |
+| `--dry-run`       | `-n`  | false            | Call LLM but do not save results to disk/vault/DB. Print to stdout. |
+| `--no-llm`        |       | false            | Skip LLM call, use mock response. Implies `--dry-run`.              |
+| `--verbose`       | `-v`  | off              | Show extra progress output                                          |
+| `--debug`         | `-d`  | off              | Show raw prompts and LLM responses                                  |
+| `--weight`        | `-w`  | 1.0              | Override a persona's weight (e.g. `solomon=1.5`). Repeatable.       |
+| `--list-personas` |       | —                | List available personas and exit.                                   |
 
 ## Project Structure
 
