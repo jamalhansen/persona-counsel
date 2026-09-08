@@ -3,6 +3,7 @@ import asyncio
 from typing import Any
 
 from local_first_common.personas import PersonaCard
+from local_first_common.tracking import track_llm_run
 from pydantic_ai import Agent
 
 from .models import CouncilSynthesis, PersonaEvaluation
@@ -76,6 +77,11 @@ def _format_evaluations_for_synthesis(
     return "\n".join(parts)
 
 
+def _model_spec(model: Any) -> str:
+    """Extract human-readable model spec string from pydantic-ai model."""
+    return getattr(model, "model_name", None) or getattr(model, "model", None) or str(model)
+
+
 async def _evaluate_persona(
     persona: PersonaCard,
     goals_text: str,
@@ -93,7 +99,13 @@ async def _evaluate_persona(
     )
     user_prompt = _build_evaluation_prompt(goals_text, prior_text, prior_report_text)
     async with semaphore:
-        result = await agent.run(user_prompt)
+        with track_llm_run(
+            "persona-counsel",
+            _model_spec(model),
+            source_location=f"persona:{persona.name}",
+        ) as run:
+            result = await agent.run(user_prompt)
+            run.track(result, item_count=1)
     # Ensure persona metadata is correct regardless of LLM output
     ev = result.output
     ev.persona_name = persona.name
@@ -115,7 +127,13 @@ async def _synthesize(
     )
     eval_text = _format_evaluations_for_synthesis(evaluations, weights)
     user_prompt = SYNTHESIS_USER_PROMPT.format(evaluations_text=eval_text)
-    result = await agent.run(user_prompt)
+    with track_llm_run(
+        "persona-counsel",
+        _model_spec(model),
+        source_location="synthesis",
+    ) as run:
+        result = await agent.run(user_prompt)
+        run.track(result, item_count=len(evaluations))
     return result.output
 
 

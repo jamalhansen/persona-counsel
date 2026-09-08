@@ -1,6 +1,7 @@
 """Typer CLI for persona-counsel."""
 
 import asyncio
+import logging
 import os
 import re
 from pathlib import Path
@@ -18,6 +19,7 @@ from local_first_common.cli import (
     provider_option,
     model_option,
 )
+from local_first_common.logging import setup_logging
 from local_first_common.tracking import register_tool, timed_run
 from local_first_common.obsidian import find_vault_root
 from local_first_common.personas import list_personas
@@ -205,6 +207,8 @@ def main(
       --week  YYYY-WNN  Weekly goals note (e.g. 2026-W10)
       --year  YYYY      Annual goals note (e.g. 2026)
     """
+    log_level = logging.DEBUG if verbose else logging.WARNING
+    setup_logging(level=log_level, tool_name=TOOL_NAME, persist_warnings=True)
 
     # Handle --list-personas
     if list_personas_flag:
