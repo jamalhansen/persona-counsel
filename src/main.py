@@ -1,4 +1,4 @@
-from persona_counsel.logic import app
+from persona_counsel.cli import app
 
 if __name__ == "__main__":
     app()

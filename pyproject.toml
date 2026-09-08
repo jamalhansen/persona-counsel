@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-counsel = "persona_counsel.logic:app"
+counsel = "persona_counsel.cli:app"
 
 [build-system]
 requires = ["hatchling"]
