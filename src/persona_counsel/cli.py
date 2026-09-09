@@ -114,10 +114,10 @@ def _validate_scope(
     return "month"
 
 
-def _build_model_or_raise(provider: str, model: Optional[str]):
+def _build_model_or_raise(provider: str, model: Optional[str], tier: Optional[str] = None):
     """Create the pydantic-ai model or raise typed error."""
     try:
-        return build_model(provider, model)
+        return build_model(provider, model, tier=tier)
     except Exception as e:  # noqa: BLE001
         raise ModelBuildError(str(e)) from e
 
@@ -183,6 +183,10 @@ def main(
         "MODEL_PROVIDER", "ollama"
     ),
     model: Annotated[Optional[str], model_option()] = None,
+    tier: Annotated[
+        str,
+        typer.Option("--tier", "-t", help="Model tier ('reasoning' or 'fast'). Defaults to 'reasoning'."),
+    ] = "reasoning",
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
     verbose: bool = typer.Option(
@@ -324,12 +328,16 @@ def main(
 
     # Resolve provider (uses pydantic-ai model, not BaseProvider)
     try:
-        pai_model = _build_model_or_raise(provider, model)
+        pai_model = _build_model_or_raise(provider, model, tier=tier)
     except ModelBuildError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)
 
-    model_name = model or PROVIDER_DEFAULTS.get(provider, "unknown")
+    model_name = (
+        getattr(pai_model, "model_name", None)
+        or model
+        or PROVIDER_DEFAULTS.get(provider, "unknown")
+    )
 
     console.print(
         f"[bold]Running council[/bold] for [cyan]{period}[/cyan] "
