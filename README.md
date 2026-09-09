@@ -86,8 +86,8 @@ This tool follows the [Local-First AI project blueprint](https://github.com/jama
 ```
 persona-counsel/
 ├── src/
-│   ├── main.py           # Typer CLI entry point
-│   ├── logic.py          # Core council orchestration
+│   ├── cli.py            # Typer CLI entry point and formatting
+│   ├── core.py           # Core council orchestration
 │   ├── council.py        # Persona execution logic
 │   ├── models.py         # Pydantic models for evaluations
 │   ├── renderer.py       # Markdown report generator
