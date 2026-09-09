@@ -38,6 +38,7 @@ from .goals import (
     load_weekly_goals,
     weekly_output_path,
 )
+from .memory import format_council_memory, get_council_memory
 from .renderer import render_report
 
 TOOL_NAME = "persona-counsel"
@@ -129,6 +130,7 @@ def _run_council_or_raise(
     weights: dict[str, float],
     concurrency: int,
     prior_report_text: Optional[str],
+    council_memory_text: Optional[str] = None,
 ):
     """Run council and raise typed error on failure."""
     try:
@@ -141,6 +143,7 @@ def _run_council_or_raise(
                 weights,
                 concurrency,
                 prior_report_text,
+                council_memory_text,
             )
         )
     except Exception as e:  # noqa: BLE001
@@ -170,6 +173,11 @@ def main(
         None,
         "--prior-report",
         help="Prior council report for context — lets personas see what was recommended last time (YYYY-MM / YYYY-WNN / YYYY).",
+    ),
+    memory: bool = typer.Option(
+        True,
+        "--memory/--no-memory",
+        help="Retrieve prior council recommendations and memory via vsearch.",
     ),
     provider: Annotated[str, provider_option()] = os.environ.get(
         "MODEL_PROVIDER", "ollama"
@@ -283,6 +291,19 @@ def main(
         except (FileNotFoundError, ValueError) as e:
             err_console.print(f"[yellow]Warning:[/yellow] {e}")
 
+    council_memory_text: Optional[str] = None
+    if not prior_report_text and memory:
+        if verbose:
+            console.print(
+                "[dim]Retrieving prior council memory via vsearch/disk...[/dim]"
+            )
+        mem_items = get_council_memory(period, goals_text, vault_root=vault_root)
+        council_memory_text = format_council_memory(mem_items)
+        if council_memory_text and verbose:
+            console.print(
+                f"[dim]Injected {len(mem_items)} historical council memory snippet(s)[/dim]"
+            )
+
     # Load personas
     all_personas = list_personas("Counsel", vault_path=vault_root)
     council_personas = [
@@ -329,6 +350,7 @@ def main(
                 weights,
                 concurrency,
                 prior_report_text,
+                council_memory_text,
             )
             _run.item_count = len(council_personas)
     except CouncilRunError as e:

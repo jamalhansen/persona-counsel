@@ -363,6 +363,40 @@ class TestMainCommand:
             )
         assert result.exit_code == 0
 
+    def test_memory_enabled_by_default(self, tmp_path):
+        vault = self._mock_run(tmp_path)
+        mock_get_memory = MagicMock(return_value=[{"source_file": "2026-01-council.md", "breadcrumb": "Consensus", "snippet": "Prior item"}])
+
+        with (
+            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.cli.build_model"),
+            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
+            patch("persona_counsel.cli.get_council_memory", mock_get_memory),
+        ):
+            result = runner.invoke(
+                app,
+                ["--month", "2026-03", "--dry-run", "--vault", str(vault)],
+            )
+        assert result.exit_code == 0
+        mock_get_memory.assert_called_once()
+
+    def test_no_memory_disables_retrieval(self, tmp_path):
+        vault = self._mock_run(tmp_path)
+        mock_get_memory = MagicMock()
+
+        with (
+            patch("persona_counsel.cli.list_personas", return_value=[make_persona_mock()]),
+            patch("persona_counsel.cli.build_model"),
+            patch("persona_counsel.cli.asyncio.run", side_effect=fake_async_run),
+            patch("persona_counsel.cli.get_council_memory", mock_get_memory),
+        ):
+            result = runner.invoke(
+                app,
+                ["--month", "2026-03", "--no-memory", "--dry-run", "--vault", str(vault)],
+            )
+        assert result.exit_code == 0
+        mock_get_memory.assert_not_called()
+
 
 class TestStrictHelpers:
     def test_build_model_or_raise_wraps_errors(self):

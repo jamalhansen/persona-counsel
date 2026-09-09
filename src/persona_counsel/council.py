@@ -44,6 +44,7 @@ def _build_evaluation_prompt(
     goals_text: str,
     prior_text: str | None,
     prior_report_text: str | None = None,
+    council_memory_text: str | None = None,
 ) -> str:
     prior_section = ""
     if prior_text:
@@ -51,6 +52,8 @@ def _build_evaluation_prompt(
     prior_report_section = ""
     if prior_report_text:
         prior_report_section = f"\n--- PRIOR COUNCIL REPORT (what was recommended last time) ---\n{prior_report_text}\n"
+    elif council_memory_text:
+        prior_report_section = f"\n--- HISTORICAL COUNCIL MEMORY (recommendations & commitments from prior reviews) ---\n{council_memory_text}\n"
     return EVALUATION_USER_PROMPT.format(
         goals_text=goals_text,
         prior_section=prior_section,
@@ -89,6 +92,7 @@ async def _evaluate_persona(
     model: Any,
     semaphore: asyncio.Semaphore,
     prior_report_text: str | None = None,
+    council_memory_text: str | None = None,
 ) -> PersonaEvaluation:
     """Run a single persona evaluation, gated by a semaphore."""
     agent: Agent[None, PersonaEvaluation] = Agent(
@@ -97,7 +101,9 @@ async def _evaluate_persona(
         system_prompt=persona.system_prompt,
         retries=3,
     )
-    user_prompt = _build_evaluation_prompt(goals_text, prior_text, prior_report_text)
+    user_prompt = _build_evaluation_prompt(
+        goals_text, prior_text, prior_report_text, council_memory_text
+    )
     async with semaphore:
         with track_llm_run(
             "persona-counsel",
@@ -145,11 +151,20 @@ async def run_council(
     weights: dict[str, float],
     concurrency: int = 3,
     prior_report_text: str | None = None,
+    council_memory_text: str | None = None,
 ) -> tuple[list[PersonaEvaluation], CouncilSynthesis]:
     """Evaluate all personas in parallel (up to `concurrency` at once), then synthesize."""
     semaphore = asyncio.Semaphore(concurrency)
     evaluation_tasks = [
-        _evaluate_persona(persona, goals_text, prior_text, model, semaphore, prior_report_text)
+        _evaluate_persona(
+            persona,
+            goals_text,
+            prior_text,
+            model,
+            semaphore,
+            prior_report_text,
+            council_memory_text,
+        )
         for persona in personas
     ]
     evaluations: list[PersonaEvaluation] = list(await asyncio.gather(*evaluation_tasks))
