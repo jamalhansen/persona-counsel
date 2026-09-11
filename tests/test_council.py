@@ -75,14 +75,14 @@ class TestFormatEvaluationsForSynthesis:
 class TestRunCouncil:
     def test_returns_evaluations_for_each_persona(self, sample_persona, second_persona):
         model = TestModel()
-        evaluations, synthesis = asyncio.run(
+        evaluations, _synthesis = asyncio.run(
             run_council([sample_persona, second_persona], "## Goals\nDo things.", None, model, {})
         )
         assert len(evaluations) == 2
 
     def test_evaluation_names_match_personas(self, sample_persona, second_persona):
         model = TestModel()
-        evaluations, synthesis = asyncio.run(
+        evaluations, _synthesis = asyncio.run(
             run_council([sample_persona, second_persona], "## Goals\nDo things.", None, model, {})
         )
         names = {ev.persona_name for ev in evaluations}
@@ -98,14 +98,14 @@ class TestRunCouncil:
 
     def test_single_persona_works(self, sample_persona):
         model = TestModel()
-        evaluations, synthesis = asyncio.run(
+        evaluations, _synthesis = asyncio.run(
             run_council([sample_persona], "## Goals\nDo one thing.", None, model, {})
         )
         assert len(evaluations) == 1
 
     def test_with_prior_text(self, sample_persona):
         model = TestModel()
-        evaluations, synthesis = asyncio.run(
+        evaluations, _synthesis = asyncio.run(
             run_council([sample_persona], "## Goals", "## Prior", model, {})
         )
         assert len(evaluations) == 1

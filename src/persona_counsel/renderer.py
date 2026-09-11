@@ -1,5 +1,5 @@
 """Render council results as a markdown report."""
-from datetime import date
+from datetime import datetime
 
 from .models import CouncilSynthesis, PersonaEvaluation
 
@@ -70,7 +70,7 @@ def render_report(
 ) -> str:
     """Render the full council report as a markdown string."""
     persona_names = ", ".join(ev.persona_name for ev in evaluations)
-    generated = date.today().isoformat()
+    generated = datetime.now().astimezone().date().isoformat()
     label = _period_label(period)
 
     fm = (

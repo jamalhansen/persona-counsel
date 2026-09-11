@@ -402,14 +402,15 @@ class TestStrictHelpers:
     def test_build_model_or_raise_wraps_errors(self):
         with patch(
             "persona_counsel.cli.build_model", side_effect=RuntimeError("bad model")
-        ):
-            with pytest.raises(ModelBuildError, match="bad model"):
-                _build_model_or_raise("ollama", None)
+        ), pytest.raises(ModelBuildError, match="bad model"):
+            _build_model_or_raise("ollama", None)
 
     def test_run_council_or_raise_wraps_errors(self):
         async def _boom(*args, **kwargs):
             raise RuntimeError("council blew up")
 
-        with patch("persona_counsel.cli.run_council", side_effect=_boom):
-            with pytest.raises(CouncilRunError, match="council blew up"):
-                _run_council_or_raise([], "goals", None, MagicMock(), {}, 1, None)
+        with (
+            patch("persona_counsel.cli.run_council", side_effect=_boom),
+            pytest.raises(CouncilRunError, match="council blew up"),
+        ):
+            _run_council_or_raise([], "goals", None, MagicMock(), {}, 1, None)

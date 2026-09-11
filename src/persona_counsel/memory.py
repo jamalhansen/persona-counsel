@@ -9,8 +9,8 @@ from __future__ import annotations
 import os
 import re
 import sqlite3
+import sys
 from pathlib import Path
-from typing import Optional
 
 from local_first_common.obsidian import find_vault_root
 
@@ -25,7 +25,7 @@ def search_council_memory_via_vsearch(
     current_period: str,
     goals_text: str,
     top_k: int = 3,
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
 ) -> list[dict]:
     """Search vsearch for prior council recommendations, dissents, and decisions."""
     path = db_path or get_vsearch_db_path()
@@ -50,7 +50,7 @@ def search_council_memory_via_vsearch(
         cur = conn.execute(sql, (fts_query, top_k * 4))
         rows = cur.fetchall()
         conn.close()
-    except Exception:
+    except Exception:  # noqa: BLE001 - vsearch/BM25 is a best-effort memory source; any failure should degrade to no results, not crash
         return []
 
     for _, source_file, breadcrumb, text, rank in rows:
@@ -115,7 +115,8 @@ def find_recent_council_reports_on_disk(
             )
             if len(found) >= max_reports:
                 break
-        except Exception:
+        except Exception as e:  # noqa: BLE001 - a hand-edited council report can fail to read/parse in many ways; skip it, don't stop the scan
+            print(f"  [skipped] {path.name}: {e}", file=sys.stderr)
             continue
 
     return found
@@ -151,9 +152,9 @@ def _extract_report_summary(content: str, max_chars: int = 300) -> str:
 def get_council_memory(
     current_period: str,
     goals_text: str,
-    vault_root: Optional[Path] = None,
+    vault_root: Path | None = None,
     top_k: int = 3,
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
 ) -> list[dict]:
     """Retrieve prior council recommendations and decisions using vsearch with disk fallback."""
     results = search_council_memory_via_vsearch(

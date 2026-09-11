@@ -5,25 +5,24 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
-from rich.console import Console
-from rich.markdown import Markdown
-
 from local_first_common.cli import (
-    init_config_option,
     dry_run_option,
-    no_llm_option,
-    resolve_dry_run,
-    provider_option,
+    init_config_option,
     model_option,
+    no_llm_option,
+    provider_option,
+    resolve_dry_run,
 )
 from local_first_common.logging import setup_logging
-from local_first_common.tracking import register_tool, timed_run
 from local_first_common.obsidian import find_vault_root
 from local_first_common.personas import list_personas
-from local_first_common.pydantic_ai_utils import build_model, PROVIDER_DEFAULTS
+from local_first_common.pydantic_ai_utils import PROVIDER_DEFAULTS, build_model
+from local_first_common.tracking import register_tool, timed_run
+from rich.console import Console
+from rich.markdown import Markdown
 
 from .council import run_council
 from .goals import (
@@ -89,7 +88,7 @@ def _parse_weight(raw: str) -> tuple[str, float]:
 
 
 def _validate_scope(
-    month: Optional[str], week: Optional[str], year: Optional[str]
+    month: str | None, week: str | None, year: str | None
 ) -> str:
     """Ensure at most one scope flag is set. Return the active scope: 'month', 'week', or 'year'."""
     active = sum(x is not None for x in [month, week, year])
@@ -114,23 +113,23 @@ def _validate_scope(
     return "month"
 
 
-def _build_model_or_raise(provider: str, model: Optional[str], tier: Optional[str] = None):
+def _build_model_or_raise(provider: str, model: str | None, tier: str | None = None):
     """Create the pydantic-ai model or raise typed error."""
     try:
         return build_model(provider, model, tier=tier)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise ModelBuildError(str(e)) from e
 
 
 def _run_council_or_raise(
     council_personas,
     goals_text: str,
-    prior_text: Optional[str],
+    prior_text: str | None,
     pai_model,
     weights: dict[str, float],
     concurrency: int,
-    prior_report_text: Optional[str],
-    council_memory_text: Optional[str] = None,
+    prior_report_text: str | None,
+    council_memory_text: str | None = None,
 ):
     """Run council and raise typed error on failure."""
     try:
@@ -146,30 +145,30 @@ def _run_council_or_raise(
                 council_memory_text,
             )
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise CouncilRunError(str(e)) from e
 
 
 @app.command()
 def main(
-    month: Optional[str] = typer.Option(
+    month: str | None = typer.Option(
         None,
         "--month",
         "-M",
         help="Month to evaluate (YYYY-MM). Defaults to current month.",
     ),
-    week: Optional[str] = typer.Option(
+    week: str | None = typer.Option(
         None, "--week", help="ISO week to evaluate (YYYY-WNN, e.g. 2026-W10)."
     ),
-    year: Optional[str] = typer.Option(
+    year: str | None = typer.Option(
         None, "--year", help="Year to evaluate (YYYY, e.g. 2026)."
     ),
-    prior: Optional[str] = typer.Option(
+    prior: str | None = typer.Option(
         None,
         "--prior",
         help="Prior period goals note for context (YYYY-MM / YYYY-WNN / YYYY).",
     ),
-    prior_report: Optional[str] = typer.Option(
+    prior_report: str | None = typer.Option(
         None,
         "--prior-report",
         help="Prior council report for context — lets personas see what was recommended last time (YYYY-MM / YYYY-WNN / YYYY).",
@@ -182,7 +181,7 @@ def main(
     provider: Annotated[str, provider_option()] = os.environ.get(
         "MODEL_PROVIDER", "ollama"
     ),
-    model: Annotated[Optional[str], model_option()] = None,
+    model: Annotated[str | None, model_option()] = None,
     tier: Annotated[
         str,
         typer.Option("--tier", "-t", help="Model tier ('reasoning' or 'fast'). Defaults to 'reasoning'."),
@@ -192,15 +191,17 @@ def main(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Show extra progress output."
     ),
-    vault: Optional[Path] = typer.Option(
-        None, "--vault", help="Override the Obsidian vault path."
-    ),
-    weight: Optional[list[str]] = typer.Option(
-        None,
-        "--weight",
-        "-w",
-        help="Override persona weight (e.g. --weight solomon=1.5). Repeatable.",
-    ),
+    vault: Annotated[
+        Path | None, typer.Option("--vault", help="Override the Obsidian vault path.")
+    ] = None,
+    weight: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--weight",
+            "-w",
+            help="Override persona weight (e.g. --weight solomon=1.5). Repeatable.",
+        ),
+    ] = None,
     concurrency: int = typer.Option(
         3,
         "--concurrency",
@@ -275,7 +276,7 @@ def main(
         err_console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)
 
-    prior_text: Optional[str] = None
+    prior_text: str | None = None
     if prior:
         if verbose:
             console.print(f"[dim]Loading prior period {prior} for context...[/dim]")
@@ -284,7 +285,7 @@ def main(
         except FileNotFoundError as e:
             err_console.print(f"[yellow]Warning:[/yellow] {e}")
 
-    prior_report_text: Optional[str] = None
+    prior_report_text: str | None = None
     if prior_report:
         if verbose:
             console.print(
@@ -295,7 +296,7 @@ def main(
         except (FileNotFoundError, ValueError) as e:
             err_console.print(f"[yellow]Warning:[/yellow] {e}")
 
-    council_memory_text: Optional[str] = None
+    council_memory_text: str | None = None
     if not prior_report_text and memory:
         if verbose:
             console.print(

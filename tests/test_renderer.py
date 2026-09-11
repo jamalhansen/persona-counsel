@@ -1,7 +1,12 @@
 """Tests for the markdown renderer."""
 
 from persona_counsel.models import CouncilSynthesis, PersonaEvaluation
-from persona_counsel.renderer import _month_label, _period_label, render_evaluation, render_report
+from persona_counsel.renderer import (
+    _month_label,
+    _period_label,
+    render_evaluation,
+    render_report,
+)
 
 
 def make_evaluation(name="Solomon", archetype="The Elder") -> PersonaEvaluation:
