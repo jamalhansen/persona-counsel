@@ -20,7 +20,7 @@ from local_first_common.logging import setup_logging
 from local_first_common.obsidian import find_vault_root
 from local_first_common.personas import list_personas
 from local_first_common.pydantic_ai_utils import PROVIDER_DEFAULTS, build_model
-from local_first_common.tracking import register_tool, timed_run
+from local_first_common.tracking import register_tool
 from rich.console import Console
 from rich.markdown import Markdown
 
@@ -346,22 +346,22 @@ def main(
         f"({len(council_personas)} personas)..."
     )
 
-    # Run the council
+    # Run the council. Not logged to processing_log: this tool's LLM calls
+    # go through pydantic-ai's own model objects directly (ollama/anthropic
+    # APIs), never through llm-gateway-service -- the console output above
+    # and error reporting below are this tool's own visibility, per Jamal:
+    # an LLM call logged once inside the gateway; outside it, plain logging.
     try:
-        with timed_run(
-            "persona-counsel", f"{provider}:{model_name}", source_location=period
-        ) as _run:
-            evaluations, synthesis = _run_council_or_raise(
-                council_personas,
-                goals_text,
-                prior_text,
-                pai_model,
-                weights,
-                concurrency,
-                prior_report_text,
-                council_memory_text,
-            )
-            _run.item_count = len(council_personas)
+        evaluations, synthesis = _run_council_or_raise(
+            council_personas,
+            goals_text,
+            prior_text,
+            pai_model,
+            weights,
+            concurrency,
+            prior_report_text,
+            council_memory_text,
+        )
     except CouncilRunError as e:
         err_console.print(f"[red]Council run failed:[/red] {e}")
         if verbose:
