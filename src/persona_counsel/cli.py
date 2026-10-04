@@ -81,10 +81,10 @@ def _parse_weight(raw: str) -> tuple[str, float]:
     try:
         name, value = raw.split("=", 1)
         return name.strip().lower(), float(value.strip())
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError) as err:
         raise typer.BadParameter(
             f"Weight must be in 'name=value' format (e.g. solomon=1.5), got: {raw!r}"
-        )
+        ) from err
 
 
 def _validate_scope(
@@ -242,7 +242,7 @@ def main(
         scope = _validate_scope(month, week, year)
     except typer.BadParameter as e:
         err_console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Resolve the active period and select loaders
     if scope == "week":
@@ -274,7 +274,7 @@ def main(
         goals_text = loader(period, vault_root=vault_root)
     except FileNotFoundError as e:
         err_console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     prior_text: str | None = None
     if prior:
@@ -332,7 +332,7 @@ def main(
         pai_model = _build_model_or_raise(provider, model, tier=tier)
     except ModelBuildError as e:
         err_console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     model_name = (
         getattr(pai_model, "model_name", None)
@@ -368,7 +368,7 @@ def main(
             import traceback
 
             traceback.print_exc()
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Render report
     report = render_report(period, evaluations, synthesis, provider, model_name)
