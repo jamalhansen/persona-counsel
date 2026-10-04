@@ -44,7 +44,10 @@ class TestBuildModel:
         model = build_model("groq", None)
         assert isinstance(model, GroqModel)
 
-    def test_deepseek_returns_openai_chat_model(self):
+    def test_deepseek_returns_openai_chat_model(self, monkeypatch):
+        # Like the groq test: a fake key. It passed only where a real
+        # DEEPSEEK_API_KEY was in the environment; CI has none (2026-10-04).
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "fake-key")
         from pydantic_ai.models.openai import OpenAIChatModel
         model = build_model("deepseek", None)
         assert isinstance(model, OpenAIChatModel)
