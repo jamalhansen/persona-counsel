@@ -1,4 +1,5 @@
 """Tests for model_factory.py."""
+
 import pytest
 from local_first_common.pydantic_ai_utils import (
     PROVIDER_DEFAULTS,
@@ -24,23 +25,27 @@ class TestBuildModel:
 
     def test_ollama_returns_openai_chat_model(self):
         from pydantic_ai.models.openai import OpenAIChatModel
+
         model = build_model("ollama", None)
         assert isinstance(model, OpenAIChatModel)
 
     def test_ollama_with_custom_model(self):
         from pydantic_ai.models.openai import OpenAIChatModel
+
         model = build_model("ollama", "llama3.2:3b")
         assert isinstance(model, OpenAIChatModel)
 
     def test_anthropic_returns_anthropic_model(self, monkeypatch):
         monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key")
         from pydantic_ai.models.anthropic import AnthropicModel
+
         model = build_model("anthropic", None)
         assert isinstance(model, AnthropicModel)
 
     def test_groq_returns_groq_model(self, monkeypatch):
         monkeypatch.setenv("GROQ_API_KEY", "fake-key")
         from pydantic_ai.models.groq import GroqModel
+
         model = build_model("groq", None)
         assert isinstance(model, GroqModel)
 
@@ -49,16 +54,19 @@ class TestBuildModel:
         # DEEPSEEK_API_KEY was in the environment; CI has none (2026-10-04).
         monkeypatch.setenv("DEEPSEEK_API_KEY", "fake-key")
         from pydantic_ai.models.openai import OpenAIChatModel
+
         model = build_model("deepseek", None)
         assert isinstance(model, OpenAIChatModel)
 
     def test_gemini_returns_google_model(self, monkeypatch):
         monkeypatch.setenv("GOOGLE_API_KEY", "fake-key")
         from pydantic_ai.models.google import GoogleModel
+
         model = build_model("gemini", None)
         assert isinstance(model, GoogleModel)
 
     def test_mock_returns_test_model(self):
         from pydantic_ai.models.test import TestModel
+
         model = build_model("mock", None)
         assert isinstance(model, TestModel)

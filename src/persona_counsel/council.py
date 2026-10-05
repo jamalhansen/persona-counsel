@@ -1,4 +1,5 @@
 """Council orchestration: run persona evaluations in parallel, then synthesize."""
+
 import asyncio
 from typing import Any
 
@@ -61,9 +62,7 @@ def _build_evaluation_prompt(
     )
 
 
-def _format_evaluations_for_synthesis(
-    evaluations: list[PersonaEvaluation], weights: dict[str, float]
-) -> str:
+def _format_evaluations_for_synthesis(evaluations: list[PersonaEvaluation], weights: dict[str, float]) -> str:
     parts = []
     for ev in evaluations:
         weight = weights.get(ev.persona_name.lower(), 1.0)
@@ -101,9 +100,7 @@ async def _evaluate_persona(
         system_prompt=persona.system_prompt,
         retries=3,
     )
-    user_prompt = _build_evaluation_prompt(
-        goals_text, prior_text, prior_report_text, council_memory_text
-    )
+    user_prompt = _build_evaluation_prompt(goals_text, prior_text, prior_report_text, council_memory_text)
     async with semaphore:
         with track_llm_run(
             "persona-counsel",

@@ -91,9 +91,7 @@ def test_find_recent_council_reports_on_disk(tmp_path):
     reviews_dir.mkdir(parents=True)
 
     # Current month
-    (reviews_dir / "2026-03-council.md").write_text(
-        "## Consensus\nCurrent review content.", encoding="utf-8"
-    )
+    (reviews_dir / "2026-03-council.md").write_text("## Consensus\nCurrent review content.", encoding="utf-8")
     # Previous month
     (reviews_dir / "2026-02-council.md").write_text(
         "## Consensus\nPrevious review: stick to 3 goals and say no to distractions.",
@@ -143,9 +141,7 @@ def test_get_council_memory_fallback(tmp_path):
     vault = tmp_path / "vault"
     reviews_dir = vault / "Goals" / "2026" / "reviews"
     reviews_dir.mkdir(parents=True)
-    (reviews_dir / "2026-01-council.md").write_text(
-        "## Consensus\nPrior consensus advice.", encoding="utf-8"
-    )
+    (reviews_dir / "2026-01-council.md").write_text("## Consensus\nPrior consensus advice.", encoding="utf-8")
 
     # Missing db path forces disk fallback
     results = get_council_memory(

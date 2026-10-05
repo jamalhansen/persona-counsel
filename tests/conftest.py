@@ -1,4 +1,5 @@
 """Shared test fixtures for persona-counsel."""
+
 import pytest
 import yaml
 from local_first_common.personas import PersonaCard

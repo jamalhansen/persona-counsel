@@ -1,4 +1,5 @@
 """Tests for PersonaEvaluation and CouncilSynthesis models."""
+
 import pytest
 from pydantic import ValidationError
 

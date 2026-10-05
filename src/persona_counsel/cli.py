@@ -82,34 +82,24 @@ def _parse_weight(raw: str) -> tuple[str, float]:
         name, value = raw.split("=", 1)
         return name.strip().lower(), float(value.strip())
     except (ValueError, AttributeError) as err:
-        raise typer.BadParameter(
-            f"Weight must be in 'name=value' format (e.g. solomon=1.5), got: {raw!r}"
-        ) from err
+        raise typer.BadParameter(f"Weight must be in 'name=value' format (e.g. solomon=1.5), got: {raw!r}") from err
 
 
-def _validate_scope(
-    month: str | None, week: str | None, year: str | None
-) -> str:
+def _validate_scope(month: str | None, week: str | None, year: str | None) -> str:
     """Ensure at most one scope flag is set. Return the active scope: 'month', 'week', or 'year'."""
     active = sum(x is not None for x in [month, week, year])
     if active > 1:
-        raise typer.BadParameter(
-            "--month, --week, and --year are mutually exclusive. Specify at most one."
-        )
+        raise typer.BadParameter("--month, --week, and --year are mutually exclusive. Specify at most one.")
     if week is not None:
         if not _WEEK_RE.match(week):
-            raise typer.BadParameter(
-                f"--week must be YYYY-WNN (e.g. 2026-W10), got: {week!r}"
-            )
+            raise typer.BadParameter(f"--week must be YYYY-WNN (e.g. 2026-W10), got: {week!r}")
         return "week"
     if year is not None:
         if not _YEAR_RE.match(year):
             raise typer.BadParameter(f"--year must be YYYY (e.g. 2026), got: {year!r}")
         return "year"
     if month is not None and not _MONTH_RE.match(month):
-        raise typer.BadParameter(
-            f"--month must be YYYY-MM (e.g. 2026-03), got: {month!r}"
-        )
+        raise typer.BadParameter(f"--month must be YYYY-MM (e.g. 2026-03), got: {month!r}")
     return "month"
 
 
@@ -157,12 +147,8 @@ def main(
         "-M",
         help="Month to evaluate (YYYY-MM). Defaults to current month.",
     ),
-    week: str | None = typer.Option(
-        None, "--week", help="ISO week to evaluate (YYYY-WNN, e.g. 2026-W10)."
-    ),
-    year: str | None = typer.Option(
-        None, "--year", help="Year to evaluate (YYYY, e.g. 2026)."
-    ),
+    week: str | None = typer.Option(None, "--week", help="ISO week to evaluate (YYYY-WNN, e.g. 2026-W10)."),
+    year: str | None = typer.Option(None, "--year", help="Year to evaluate (YYYY, e.g. 2026)."),
     prior: str | None = typer.Option(
         None,
         "--prior",
@@ -178,9 +164,7 @@ def main(
         "--memory/--no-memory",
         help="Retrieve prior council recommendations and memory via vsearch.",
     ),
-    provider: Annotated[str, provider_option()] = os.environ.get(
-        "MODEL_PROVIDER", "ollama"
-    ),
+    provider: Annotated[str, provider_option()] = os.environ.get("MODEL_PROVIDER", "ollama"),
     model: Annotated[str | None, model_option()] = None,
     tier: Annotated[
         str,
@@ -188,12 +172,8 @@ def main(
     ] = "reasoning",
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Show extra progress output."
-    ),
-    vault: Annotated[
-        Path | None, typer.Option("--vault", help="Override the Obsidian vault path.")
-    ] = None,
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show extra progress output."),
+    vault: Annotated[Path | None, typer.Option("--vault", help="Override the Obsidian vault path.")] = None,
     weight: Annotated[
         list[str] | None,
         typer.Option(
@@ -208,9 +188,7 @@ def main(
         "-c",
         help="Max parallel API calls (lower = fewer rate-limit errors, default 3).",
     ),
-    list_personas_flag: bool = typer.Option(
-        False, "--list-personas", help="List available personas and exit."
-    ),
+    list_personas_flag: bool = typer.Option(False, "--list-personas", help="List available personas and exit."),
     init_config: Annotated[bool, init_config_option(TOOL_NAME, DEFAULTS)] = False,
 ) -> None:
     """Run your goals through the council and receive a qualitative synthesis.
@@ -288,9 +266,7 @@ def main(
     prior_report_text: str | None = None
     if prior_report:
         if verbose:
-            console.print(
-                f"[dim]Loading prior council report {prior_report} for context...[/dim]"
-            )
+            console.print(f"[dim]Loading prior council report {prior_report} for context...[/dim]")
         try:
             prior_report_text = load_council_report(prior_report, vault_root=vault_root)
         except (FileNotFoundError, ValueError) as e:
@@ -299,30 +275,20 @@ def main(
     council_memory_text: str | None = None
     if not prior_report_text and memory:
         if verbose:
-            console.print(
-                "[dim]Retrieving prior council memory via vsearch/disk...[/dim]"
-            )
+            console.print("[dim]Retrieving prior council memory via vsearch/disk...[/dim]")
         mem_items = get_council_memory(period, goals_text, vault_root=vault_root)
         council_memory_text = format_council_memory(mem_items)
         if council_memory_text and verbose:
-            console.print(
-                f"[dim]Injected {len(mem_items)} historical council memory snippet(s)[/dim]"
-            )
+            console.print(f"[dim]Injected {len(mem_items)} historical council memory snippet(s)[/dim]")
 
     # Load personas
     all_personas = list_personas("Counsel", vault_path=vault_root)
-    council_personas = [
-        p for p in all_personas if p.name.lower() in COUNCIL_PERSONA_NAMES
-    ]
+    council_personas = [p for p in all_personas if p.name.lower() in COUNCIL_PERSONA_NAMES]
     missing = set(COUNCIL_PERSONA_NAMES) - {p.name.lower() for p in council_personas}
     if missing:
-        err_console.print(
-            f"[yellow]Warning:[/yellow] Missing personas: {', '.join(sorted(missing))}"
-        )
+        err_console.print(f"[yellow]Warning:[/yellow] Missing personas: {', '.join(sorted(missing))}")
     if not council_personas:
-        err_console.print(
-            "[red]Error:[/red] No personas found in category 'Counsel'. Run --list-personas to diagnose."
-        )
+        err_console.print("[red]Error:[/red] No personas found in category 'Counsel'. Run --list-personas to diagnose.")
         raise typer.Exit(1)
 
     dry_run = resolve_dry_run(dry_run, no_llm)
@@ -334,11 +300,7 @@ def main(
         err_console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1) from None
 
-    model_name = (
-        getattr(pai_model, "model_name", None)
-        or model
-        or PROVIDER_DEFAULTS.get(provider, "unknown")
-    )
+    model_name = getattr(pai_model, "model_name", None) or model or PROVIDER_DEFAULTS.get(provider, "unknown")
 
     console.print(
         f"[bold]Running council[/bold] for [cyan]{period}[/cyan] "

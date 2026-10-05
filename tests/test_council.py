@@ -1,4 +1,5 @@
 """Tests for council orchestration (using pydantic-ai TestModel)."""
+
 import asyncio
 
 from pydantic_ai.models.test import TestModel
@@ -91,21 +92,15 @@ class TestRunCouncil:
 
     def test_synthesis_is_council_synthesis(self, sample_persona):
         model = TestModel()
-        _, synthesis = asyncio.run(
-            run_council([sample_persona], "## Goals", None, model, {})
-        )
+        _, synthesis = asyncio.run(run_council([sample_persona], "## Goals", None, model, {}))
         assert isinstance(synthesis, CouncilSynthesis)
 
     def test_single_persona_works(self, sample_persona):
         model = TestModel()
-        evaluations, _synthesis = asyncio.run(
-            run_council([sample_persona], "## Goals\nDo one thing.", None, model, {})
-        )
+        evaluations, _synthesis = asyncio.run(run_council([sample_persona], "## Goals\nDo one thing.", None, model, {}))
         assert len(evaluations) == 1
 
     def test_with_prior_text(self, sample_persona):
         model = TestModel()
-        evaluations, _synthesis = asyncio.run(
-            run_council([sample_persona], "## Goals", "## Prior", model, {})
-        )
+        evaluations, _synthesis = asyncio.run(run_council([sample_persona], "## Goals", "## Prior", model, {}))
         assert len(evaluations) == 1

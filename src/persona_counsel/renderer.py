@@ -1,4 +1,5 @@
 """Render council results as a markdown report."""
+
 from datetime import datetime
 
 from .models import CouncilSynthesis, PersonaEvaluation

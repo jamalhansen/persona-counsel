@@ -1,4 +1,5 @@
 """Load goals notes from the Obsidian vault -- monthly, weekly, or annual scope."""
+
 import re
 from datetime import datetime
 from pathlib import Path

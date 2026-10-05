@@ -1,4 +1,5 @@
 """Tests for goals.py -- loading notes from vault for all scope types."""
+
 import pytest
 
 from persona_counsel.goals import (

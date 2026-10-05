@@ -157,9 +157,7 @@ def get_council_memory(
     db_path: Path | None = None,
 ) -> list[dict]:
     """Retrieve prior council recommendations and decisions using vsearch with disk fallback."""
-    results = search_council_memory_via_vsearch(
-        current_period, goals_text, top_k=top_k, db_path=db_path
-    )
+    results = search_council_memory_via_vsearch(current_period, goals_text, top_k=top_k, db_path=db_path)
     if results:
         return results
 
@@ -175,5 +173,5 @@ def format_council_memory(memory_items: list[dict]) -> str:
     for i, item in enumerate(memory_items, start=1):
         src = item["source_file"]
         bc = f" [{item['breadcrumb']}]" if item.get("breadcrumb") else ""
-        lines.append(f"{i}. `{src}`{bc}:\n   \"{item['snippet']}\"")
+        lines.append(f'{i}. `{src}`{bc}:\n   "{item["snippet"]}"')
     return "\n\n".join(lines)
