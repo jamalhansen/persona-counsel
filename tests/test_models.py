@@ -33,7 +33,7 @@ class TestPersonaEvaluation:
 
     def test_missing_required_field_raises(self):
         with pytest.raises(ValidationError):
-            PersonaEvaluation(
+            PersonaEvaluation(  # pyright: ignore[reportCallIssue]  # missing fields on purpose
                 persona_name="Solo",
                 archetype="Elder",
                 assessment="Good.",
@@ -63,7 +63,7 @@ class TestCouncilSynthesis:
 
     def test_missing_field_raises(self):
         with pytest.raises(ValidationError):
-            CouncilSynthesis(
+            CouncilSynthesis(  # pyright: ignore[reportCallIssue]  # missing fields on purpose
                 consensus="Fine.",
                 tensions=[],
                 # missing priorities and coyote_dissent
